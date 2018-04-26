@@ -1,10 +1,16 @@
 const mqtt = require('mqtt');
-const winston = require('winston');
 const broker = 'mqtt://broker.mqttdashboard.com';
+
+const redis = require('redis');
 
 const logger = require('./logger.js');
 
-var client = mqtt.connect(broker);
+var mqtt_client = mqtt.connect(broker);
+var redis_client = redis.createClient();
+
+client.on('error',function(err){
+logger.log('error','Redis server crashed with error: '+err);
+});
 
 const topics = {
     presence: 'COE457/Wayfinding/presence',
@@ -13,29 +19,34 @@ const topics = {
 
 var rooms = [];
 
-client.on('connect', function () {
-    client.subscribe(topics.presence);
-    client.publish(topics.presence, 'Server running');
+mqtt_client.on('connect', function () {
+    mqtt_client.subscribe(topics.presence);
+    mqtt_client.publish(topics.presence, 'Server running');
     console.log('connected to broker. published to presense');
     logger.info('Subscribed to Presence');
 });
 
-client.on('message', function (topic, message) {
+mqtt_client.on('message', function (topic, message) {
     
     if (topic === topics.presence) {
         
         m = JSON.parse(message);
-        topics.rooms.push(m.number);
-        client.subscribe(topics.rooms[length - 1]);
+        topics.rooms.push('COE457/Wayfinding/'+m.number);
+        mqtt_client.subscribe(topics.rooms[length - 1]);
         
         logger.info('Subscribed to room' + m.number);
         
         var temp = {
             beacons: m.beacons,
             size: m.size,
+            map: m.map
         };
         
         rooms.push(temp);
+
+        redis_client.set(topics.rooms[length - 1],JSON.stringify(temp));
+
+
         
         
     }

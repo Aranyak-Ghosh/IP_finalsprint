@@ -1,0 +1,22 @@
+{
+  "name": "rpi",
+  "version": "1.0.0",
+  "description": "RPi Code for consuming Beacon data and publising to broker",
+  "main": "estimote.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "RPi",
+    "Estimote",
+    "ibeacon"
+  ],
+  "author": "Backstreet Boys+Lina?",
+  "license": "MIT",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "mqtt": "^2.17.0",
+    "noble": "^1.9.1",
+    "winston": "^2.4.2"
+  }
+}
