@@ -59,13 +59,12 @@ mqtt_client.on('connect', function () {
 function publish_data() {
     logger.info('Publishing data to broker');
     if (beacon_data.A) {
-        mqtt_client.publish(topics.rooms, JSON.stringify(beacon_data));
-        var avg = {
-            number: 1,
+
+        beacon_data.avg = {
             ambientLightLevel: ((beacon_data.A.ambientLightLevel + beacon_data.B.ambientLightLevel + beacon_data.C.ambientLightLevel + beacon_data.D.ambientLightLevel) / 4.0),
             temperature: ((beacon_data.A.temperature + beacon_data.B.temperature + beacon_data.C.temperature + beacon_data.D.temperature) / 4.0)
         };
-        mqtt_client.publish(topics.rooms, JSON.stringify(avg));
+        mqtt_client.publish(topics.rooms, JSON.stringify(beacon_data));
     }
 }
 
