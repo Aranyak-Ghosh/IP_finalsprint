@@ -1,12 +1,16 @@
 const mqtt = require('mqtt');
 const broker = 'mqtt://broker.mqttdashboard.com';
 
+const node_couchdb = require('node-couchdb');
+
 const redis = require('redis');
 
 const logger = require('./logger.js');
 
 var mqtt_client = mqtt.connect(broker);
 var redis_client = redis.createClient();
+
+const couchdb=new node_couchdb();
 
 client.on('error',function(err){
 logger.log('error','Redis server crashed with error: '+err);
@@ -44,10 +48,13 @@ mqtt_client.on('message', function (topic, message) {
         
         rooms.push(temp);
 
+        couchdb.del("room-list",temp.number,)
         redis_client.set(topics.rooms[length - 1],JSON.stringify(temp));
-
-
-        
-        
+    }
+    else{
+        data=JSON.parse(message);
+        if(data.A){
+            couchdb.insert("")
+        }
     }
 });

@@ -2,7 +2,7 @@
  * MQTT client
  */
 
-7const fs = require('fs');
+const fs = require('fs');
 const mqtt = require('mqtt');
 const logger = require('./logger.js');
 
@@ -20,27 +20,31 @@ const short_to_id = {
     'D': '4cb9e22acfdc501e'
 };
 
-var mqtt_client = mqtt.connect(broker);
-
 const topics = {
     presence: 'COE457/Wayfinding/presence',
-    rooms: 'COE457/Wayfinding/1'
+    rooms: 'COE457/Wayfinding/1',
+    last_will: 'COE457/Wayfinding/last_will'
 };
+var mqtt_client = mqtt.connect(broker, { will: { topic: topics.last_will, payload: room_number } });
+
+
 
 var data;
 
 function base64_encode(file) {
+    logger.verbose('Converting ' + file + ' to Base64');
     return fs.readFileSync(file, 'base64');
 }
 
 data = {
     number: room_number,
-    map: base64_encode('./public/img/Room1.jpg'),
+    map: base64_encode('/home/aghosh/Desktop/IP_part3/Rpi/public/img/Room1.jpg'),
     size: size,
     beacons: beacons
 };
 
 var beacon_data = {
+    number: 1,
     A: null,
     B: null,
     C: null,
@@ -48,13 +52,16 @@ var beacon_data = {
 };
 
 mqtt_client.on('connect', function () {
+    logger.verbose('Connected to broker');
     mqtt_client.publish(topics.presence, JSON.stringify(data));
 });
 
 function publish_data() {
+    logger.info('Publishing data to broker');
     if (beacon_data.A) {
         mqtt_client.publish(topics.rooms, JSON.stringify(beacon_data));
         var avg = {
+            number: 1,
             ambientLightLevel: ((beacon_data.A.ambientLightLevel + beacon_data.B.ambientLightLevel + beacon_data.C.ambientLightLevel + beacon_data.D.ambientLightLevel) / 4.0),
             temperature: ((beacon_data.A.temperature + beacon_data.B.temperature + beacon_data.C.temperature + beacon_data.D.temperature) / 4.0)
         };
@@ -189,6 +196,7 @@ function parseEstimoteTelemetryPacket(data) { // data is a 0-indexed byte array/
 var noble = require('noble');
 
 noble.on('stateChange', function (state) {
+
     console.log('state has changed', state);
     if (state == 'poweredOn') {
         var serviceUUIDs = [ESTIMOTE_SERVICE_UUID]; // Estimote Service
@@ -220,7 +228,7 @@ noble.on('discover', function (peripheral) {
             beacon_data.A = telemetryPacket;
         else if (telemetryPacket.shortIdentifier.toString() == short_to_id.B)
             beacon_data.B = telemetryPacket;
-        else if (telemetryPacket.shortIdentifier.toString() == 6short_to_id.C)
+        else if (telemetryPacket.shortIdentifier.toString() == short_to_id.C)
             beacon_data.C = telemetryPacket;
         else if (telemetryPacket.shortIdentifier.toString() == short_to_id.D)
             beacon_data.D = telemetryPacket;
