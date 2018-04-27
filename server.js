@@ -5,10 +5,12 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
 const NodeCouchDb = require('node-couchdb');
 const FileStore = require('session-file-store')(session);
 const uuid = require('uuid/v4');
 const COOKIE = "chipsAhoy";
+
 
 const couch = new NodeCouchDb();
 
@@ -34,7 +36,7 @@ app.use(session({
         return uuid() // use UUIDs for session IDs
     },
     secret: COOKIE,
-    store: new FileStore(),
+    store: new RedisStore({host:'localhost',port:6379}),
     cookie: { maxAge: 60000 },
     resave: false,
     saveUninitialized: true
