@@ -19,7 +19,7 @@ angular.module('hybrid')
             var options = {
                 method: 'POST',
                 url: URL + '/login',
-                data: { username: un, password:pw }
+                data: { username: un, password: pw }
             }
             $http(options).then(function () {
                 console.log('Server request to login succeeded')
@@ -34,23 +34,23 @@ angular.module('hybrid')
         /*
         * Sends a logout request to the server
         */
-        this.serverLogout = function(un){
+        this.serverLogout = function (un) {
             var options = {
                 method: 'POST',
-                url: URL+ '/logout',
-                data:{ username:un}
+                url: URL + '/logout',
+                data: { username: un }
             };
-            $http(options).then(function(){
+            $http(options).then(function () {
                 console.log('Server request to logout succeeded');
                 $rootScope.$broadcast('server-logout-succeeded');
             })
-            .catch(function(error){
-                console.log('Server request to log out failed');
-                $rootScope.$broadcast('server-lougout-failed');
-            })
+                .catch(function (error) {
+                    console.log('Server request to log out failed');
+                    $rootScope.$broadcast('server-lougout-failed');
+                })
         }
 
-        
+
         /*
         * returns a list of all projects or null if there's an error
         */
@@ -124,7 +124,7 @@ angular.module('hybrid')
         var loggedIn = storage.getItem(loggedInKey);
         var username = storage.getItem(usernameKey);
 
-        
+
         /*
         * Starts the log in process by sending a login request to the ServerInterface
         */
@@ -136,15 +136,15 @@ angular.module('hybrid')
         /*
         * Starts the log out process by sending a logout request to the ServerInterface
         */
-        this.initiateLogout = function(){
-            console.log('Attempting logout of UN: '+ username);
+        this.initiateLogout = function () {
+            console.log('Attempting logout of UN: ' + username);
             ServerInterfaceService.serverLogout(username);
         }
 
         /*
         * Broadcast listener to successful login from ServerInterface
         */
-        $rootScope.$on('server-login-success',  function (event, args) {
+        $rootScope.$on('server-login-success', function (event, args) {
             loggedIn = true;
             storage.setItem(loggedInKey, loggedIn);
             username = args.username;
@@ -156,7 +156,7 @@ angular.module('hybrid')
         /*
         * Broadcast listener to failed login from ServerInterface
         */
-        $rootScope.$on('server-login-failed', function(event){
+        $rootScope.$on('server-login-failed', function (event) {
             $rootScope.$broadcast('login-failed');
         })
 
@@ -175,10 +175,43 @@ angular.module('hybrid')
         /*
         * Broadcast listener to failed logout from ServerInterface
         */
-        $rootScope.$on('server-logout-failed', function(event){
+        $rootScope.$on('server-logout-failed', function (event) {
             $rootScope.$broadcast('logout-failed');
         })
-        
 
 
+
+    })
+    // Factory to monitor the location of the user
+    .factory('TriangulationFactory', function ($rootScope) {
+        var positionModel = { longitude: 0, latitude: 0 };
+        console.log('Triangulation factory initiated')
+
+        var maximumAge = 3600000;
+        var options = {
+            enableHighAccuracy: true,
+            maximumAge: maximumAge
+        }
+
+        var onSuccess = function (position) {
+            positionModel.longitude = position.coords.longitude;
+            positionModel.latitude = position.coords.latitude;
+            console.log('Triangulation: location changed to: ' + positionModel.latitude + ', ' + positionModel.longitude);
+        }
+
+        var onError = function (positionError) {
+            console.log('TriangulationService ERROR. Code: ' + positionError.code + ' message: ' + positionError.message);
+        }
+
+        var watchID = navigator.geolocation.watchPosition(onSuccess, onError, options);
+
+        return {
+            position: positionModel, // an object containing the long and lat of the user
+            endWatch: function () { // function to end monitoring position
+                navigator.geolocation.clearWatch(watchID);
+            },
+            restartWatch: function () { // function to restart monitoring of positin
+                watchID = navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+            }
+        }
     })

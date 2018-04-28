@@ -1,6 +1,6 @@
 angular.module('hybrid.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function (UserService, $scope, $timeout, $ionicLoading) {
+  .controller('AppController', function (TriangulationFactory, UserService, $scope, $timeout, $ionicLoading) {
 
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
@@ -18,8 +18,12 @@ angular.module('hybrid.controllers', [])
     $scope.loggedIn = false;
     $scope.username = null;
     $scope.loadingLogin =false;
-    
-
+    $scope.model ={position: TriangulationFactory.position};
+    // var updateTimer = function(){
+    //   console.log('updating time')
+    //   $timeout(updateTimer, 5000);
+    // }
+    // updateTimer();
     // Broadcast listener to when user is finally Logged in
     $scope.$on('login-succeeded', function (event, args) {
       applyLogin(args.username);
