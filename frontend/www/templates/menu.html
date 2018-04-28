@@ -1,0 +1,57 @@
+<ion-side-menus enable-menu-with-back-views="false">
+  <ion-side-menu-content>
+    <ion-nav-bar class="bar-stable">
+      <ion-nav-back-button>
+      </ion-nav-back-button>
+
+      <ion-nav-buttons side="left">
+        <button class="button button-icon button-clear ion-navicon" menu-toggle="left">
+        </button>
+      </ion-nav-buttons>
+    </ion-nav-bar>
+    <ion-nav-view name="menuContent" class="background"></ion-nav-view>
+  </ion-side-menu-content>
+
+  <ion-side-menu side="left" class="background">
+    <ion-header-bar class="bar-stable">
+      <h1 class="title">Hybrid</h1>
+    </ion-header-bar>
+    <ion-content>
+      <ion-list>
+        <!-- <ion-item menu-close ng-click="login()">
+          Login
+        </ion-item> -->
+        <ion-item menu-close href="#/app/search">
+          Search
+        </ion-item>
+        <ion-item menu-close href="#/app/browse">
+          Browse
+        </ion-item>
+        <ion-item menu-close href="#/app/landing">
+          Landing
+        </ion-item>
+      </ion-list>
+      <p color="red">{{error}}</p>
+      <div ng-show="!loggedIn">
+        <h3 centered>Login</h3>
+      <label class="item item-input">
+        <input type="text" id="username" placeholder="Username" ng-model="credentials.username"> {{$scope.username}}
+      </label>
+      <label class="item item-input">
+        <input type="password" id="password" placeholder="Password" ng-model="credentials.password">
+      </label>
+      <button class="button" ng-click="pressLogin()">Login</button>
+      </div>
+      <!-- {{loadingLogin}}
+      {{loggedIn}}
+      <div ng-hide="loadingLogin===false">
+      <ion-spinner icon="spiral"></ion-spinner>
+      </div> -->
+      <div ng-show="loggedIn">
+        Hello, {{username}}
+        <br>
+        <button class="button" ng-click="pressLogout()">Logout</button>        
+      </div>
+    </ion-content>
+  </ion-side-menu>
+</ion-side-menus>
