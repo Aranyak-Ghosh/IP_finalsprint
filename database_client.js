@@ -58,7 +58,7 @@ mqtt_client.on('message', function (topic, message) {
         couchdb.get(room_list, m.number).then(({ data, headers, status }) => {
             console.log(JSON.stringify(data));
             couchdb.del(room_list, m.number, data._rev).then(({ data, headers, status }) => {
-                couchdb.insert(room_list, { id: m.number });
+                couchdb.insert(room_list, { _id: m.number });
             }, err => {
                 logger.error("Couch_DB error: " + err.code);
             });

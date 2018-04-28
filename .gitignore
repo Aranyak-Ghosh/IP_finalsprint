@@ -62,4 +62,6 @@ typings/
 
 logs/
 
+public/
+
 .log

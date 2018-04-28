@@ -14,7 +14,7 @@ const COOKIE = "chipsAhoy";
 
 const couch = new NodeCouchDb();
 
-let User = require('./db.js');
+let User = require('./user.js');
 
 app.set('port', process.env.PORT || 8080);
 
