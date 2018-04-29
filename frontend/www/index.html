@@ -34,8 +34,19 @@
     <script src="js/services.js"></script>
     <script src="js/controllers.js"></script>
   </head>
-
-  <body ng-app="hybrid">
+<script>
+   document.addEventListener("deviceready", function() {
+        
+        // see what plugins have been installed
+        var md = cordova.require("cordova/plugin_list").metadata;
+        // alert(JSON.stringify(md));
+        
+        // retrieve the DOM element that had the ng-app attribute
+        var domElement = document.getElementById('angularApp');
+        angular.bootstrap(domElement, ["angularApp"]);
+         }, false);
+</script>
+  <body id="angularApp">
     <ion-nav-view ></ion-nav-view>
   </body>
 </html>

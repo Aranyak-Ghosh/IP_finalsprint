@@ -1,6 +1,131 @@
-angular.module('hybrid.controllers', [])
+angular.module('angularApp.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function (TriangulationFactory, UserService, $scope, $timeout, $ionicLoading) {
+  .controller('AppController', function (TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading, TriangulationBeaconsService) {
+    $scope.logToDom = function (message) {
+			// var e = document.createElement('div');
+      // e.innerText = message;
+      console.log(message);
+			$scope.error+=message;
+			// window.scrollTo(0, window.document.height);
+		};
+
+		$scope.logToError = function (message) {
+			// var e = document.getElementById("error");
+      // e.innerText = message;
+      console.log(message);
+      $scope.error+= message; 
+			//e.appendChild(e);
+			//window.scrollTo(0, window.docsument.height);
+		};
+
+
+
+    // location shit
+    
+		try { //iBeacon Initializtation
+
+			try { // bluetooth is bound and ON
+				// check to see if Bluetooth is ON, if not turn it ON
+				cordova.plugins.locationManager.isBluetoothEnabled()
+					.then(function (isEnabled) {
+						$scope.logToDom("BLE isEnabled: " + isEnabled);
+						if (isEnabled) {
+							//cordova.plugins.locationManager.disableBluetooth();
+						} else {
+							cordova.plugins.locationManager.enableBluetooth();
+						}
+					})
+					.fail(function (e) {
+						//console.error(e);
+						$scope.logToError("isBluetoothEnabled failed because: " + e);
+					})
+					.done();
+			}
+			catch (err) {
+
+				$scope.logToError("ERROR Bluetooth:" + err.name + "->" + err.message);
+			}
+
+			// alert("cordova.plugins.locationManager" + cordova.plugins.locationManager);
+
+			// create a delegate
+			$scope.delegate = new cordova.plugins.locationManager.Delegate();
+
+			// // alert('$scope.delegate' + $scope.delegate);
+
+			// // called when user enters or exits a region
+			$scope.delegate.didDetermineStateForRegion = function (pluginResult) {
+
+				$scope.logToDom('[DOM] didDetermineStateForRegion: ' + JSON.stringify(pluginResult));
+
+				cordova.plugins.locationManager.appendToDeviceLog('[DOM] didDetermineStateForRegion: '
+					+ JSON.stringify(pluginResult));
+			};
+
+			// // called when the monitoring starts
+			$scope.delegate.didStartMonitoringForRegion = function (pluginResult) {
+				console.log('didStartMonitoringForRegion:', pluginResult);
+
+				$scope.logToDom('didStartMonitoringForRegion:' + JSON.stringify(pluginResult));
+			};
+
+			// called every second, there is a list of beacons inside data.beacons
+			// will get called even if there are 0 beacons in the list
+			$scope.delegate.didRangeBeaconsInRegion = function (pluginResult) {
+				$scope.logToDom('[DOM] didRangeBeaconsInRegion: ' + JSON.stringify(pluginResult));
+			};
+
+			// called if anything fails
+			$scope.delegate.monitoringDidFailForRegionWithError = function (error) {
+				$scope.logToError(JSON.stringify(error));
+			};
+
+			//set the delegate
+			cordova.plugins.locationManager.setDelegate($scope.delegate);
+
+			// does not work - $scope.uuid = cordova.plugins.locationManager.BeaconRegion.WILDCARD_UUID;
+			$scope.uuid = "b9407f30-f5f8-466e-aff9-25556b57fed6";
+			$scope.identifier = "bf21a232f6e4a3d1"; //"bfb7d7eb384e6f18469c02836cd41813";
+			$scope.minor = 0; //45968;
+			$scope.major = 0;//33300;
+
+			//create a Region to monitor
+			try {
+
+				$scope.beaconRegion = new cordova.plugins.locationManager.BeaconRegion($scope.identifier, $scope.uuid, $scope.major, $scope.minor);
+			}
+			catch (err) {
+
+				$scope.logToError("ERROR from cordova.plugins.locationManager.BeaconRegion:" + err.name + "->" + err.message);
+			}
+
+			// alert("beaconRegion:" + $scope.beaconRegion);
+
+			// // required in iOS 8+
+			// //cordova.plugins.locationManager.requestWhenInUseAuthorization(); 
+			// // or cordova.plugins.locationManager.requestAlwaysAuthorization()
+
+			// cordova.plugins.locationManager.startMonitoringForRegion($scope.beaconRegion)
+			// 	.fail(function (e) {
+			// 		console.error(e);
+			// 		$scope.logToError("Fail: startMonitoringForRegion > " + e);
+			// 	})
+			// 	.done();
+
+			// $scope.logToDom("Monitoring Started ....");
+
+		}
+		catch (err) { // try failed in iBeacon
+
+			var vDebug = "";
+			for (var prop in err) {
+				vDebug += "property: " + prop + " value: [" + err[prop] + "]\n";
+			}
+			vDebug += "toString(): " + " value: [" + err.toString() + "]";
+
+			$scope.logToError("ERROR:" + err.name + "->" + err.message + " details:" + vDebug);
+
+		}
 
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
@@ -18,7 +143,7 @@ angular.module('hybrid.controllers', [])
     $scope.loggedIn = false;
     $scope.username = null;
     $scope.loadingLogin =false;
-    $scope.model ={position: TriangulationFactory.position};
+    $scope.model ={position: 0};
     // var updateTimer = function(){
     //   console.log('updating time')
     //   $timeout(updateTimer, 5000);

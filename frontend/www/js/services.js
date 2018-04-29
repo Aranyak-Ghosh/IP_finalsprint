@@ -1,4 +1,4 @@
-angular.module('hybrid')
+angular.module('angularApp')
     /*
     * Application to server interface
     * requests all projects 
@@ -183,7 +183,7 @@ angular.module('hybrid')
 
     })
     // Factory to monitor the location of the user
-    .factory('TriangulationFactory', function ($rootScope) {
+    .factory('TriangulationLocationServicesFactory', function ($rootScope) {
         var positionModel = { longitude: 0, latitude: 0 };
         console.log('Triangulation factory initiated')
 
@@ -214,4 +214,124 @@ angular.module('hybrid')
                 watchID = navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
             }
         }
+    })
+
+
+
+
+
+
+
+
+    .factory('TriangulationBeaconsService', function () {
+        // this factory will continiously return the beacons near it and the distances from these beacons 
+
+        function triangulate(a, b, c) { // each object is {lat, long, distance}
+            var math = require('mathjs');
+            // #assuming elevation = 0
+            earthR = 6371
+            LatA = a.lat;
+            LonA = a.long
+            DistA = a.distance
+            LatB = b.lat
+            LonB = b.long
+            DistB = b.distance
+            LatC = c.lat
+            LonC = c.long
+            DistC = c.distance
+
+            // #using authalic sphere
+            // #if using an ellipsoid this step is slightly different
+            // #Convert geodetic Lat/Long to ECEF xyz
+            // #   1. Convert Lat/Long to radians
+            // #   2. Convert Lat/Long(radians) to ECEF
+
+            function radians(number) { return number * 3.1456 / 180; }
+            function degrees(number) { return number * 180 / 3.1456; }
+            xA = earthR * (Math.cos(radians(LatA)) * Math.cos(radians(LonA)))
+            yA = earthR * (Math.cos(radians(LatA)) * Math.sin(radians(LonA)))
+            zA = earthR * (Math.sin(radians(LatA)))
+
+            xB = earthR * (Math.cos(radians(LatB)) * Math.cos(radians(LonB)))
+            yB = earthR * (Math.cos(radians(LatB)) * Math.sin(radians(LonB)))
+            zB = earthR * (Math.sin(radians(LatB)))
+
+            xC = earthR * (Math.cos(radians(LatC)) * Math.cos(radians(LonC)))
+            yC = earthR * (Math.cos(radians(LatC)) * Math.sin(radians(LonC)))
+            zC = earthR * (Math.sin(radians(LatC)))
+
+            P1 = math.matrix([xA, yA, zA])
+            P2 = math.matrix([xB, yB, zB])
+            P3 = math.matrix([xC, yC, zC])
+
+            // #from wikipedia
+            // #transform to get circle 1 at origin
+            // #transform to get circle 2 on x axis
+            ex = math.divide(math.subtract(P2, P1), math.norm(math.subtract(P2, P1)))
+            i = math.dot(ex, math.subtract(P3, P1))
+            ey = math.divide(math.subtract(math.subtract(P3, P1), i) * ex), (numpy.linalg.norm(P3 - P1 - i * ex))
+            ez = math.cross(ex, ey)
+            d = math.norm(math.subtract(P2, P1))
+            j = math.dot(ey, math.subtract(P3 - P1))
+
+            // #from wikipedia
+            // #plug and chug using above values
+            x = (Math.pow(DistA, 2) - Math.pow(DistB, 2) + Math.pow(d, 2)) / (2 * d)
+            y = ((Math.pow(DistA, 2) - Math.pow(DistC, 2) + Math.pow(i, 2) + Math.pow(j, 2)) / (2 * j)) - ((i / j) * x)
+
+            // # only one case shown here
+            z = Math.sqrt(pow(DistA, 2) - Math.pow(x, 2) - Math.pow(y, 2))
+
+            // #triPt is an array with ECEF x,y,z of trilateration point
+            triPt = P1 + x * ex + y * ey + z * ez
+
+
+            // #convert back to lat/long from ECEF
+            // #convert to degrees
+            lat = degrees(math.asin(triPt[2] / earthR))
+            lon = degrees(math.atan2(triPt[1], triPt[0]))
+            return { latitude: lat, longitude: lon };
+        }
+
+
+        var bluetoothOn = false;
+
+        var beaconsAndDistances = {}; /* This variable will hold an observable object containing all
+         the beacons in proximity and the distances from them*/
+
+        var absolutionPosition = {}; /* tha absolute position of the user calculated using beacon data */
+
+
+        var checkBluetooth = function () {
+            try { // bluetooth is bound and ON
+                // check to see if Bluetooth is ON, if not turn it ON
+                cordova.plugins.locationManager.isBluetoothEnabled()
+                    .then(function (isEnabled) {
+                        $scope.logToDom("BLE isEnabled: " + isEnabled);
+                        if (isEnabled) {
+                            //cordova.plugins.locationManager.disableBluetooth();
+                        } else {
+                            cordova.plugins.locationManager.enableBluetooth();
+                        }
+                    })
+                    .fail(function (e) {
+                        //console.error(e);
+                        $scope.logToError("isBluetoothEnabled failed because: " + e);
+                    })
+                    .done();
+            }
+            catch (err) {
+
+                $scope.logToError("ERROR Bluetooth:" + err.name + "->" + err.message);
+            }
+        }
+
+
+
+        return {
+            doTheLocationThing: function () {
+
+            }
+        }
+
     })

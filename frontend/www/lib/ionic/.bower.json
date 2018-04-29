@@ -8,7 +8,7 @@
     "Adam Bradley <adam@drifty.com>",
     "Ben Sperry <ben@drifty.com>"
   ],
-  "description": "Advanced HTML5 hybrid mobile app development framework.",
+  "description": "Advanced HTML5 angularApp mobile app development framework.",
   "main": [
     "css/ionic.css",
     "fonts/*",
