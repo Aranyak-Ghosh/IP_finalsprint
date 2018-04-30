@@ -222,10 +222,129 @@ angular.module('angularApp')
 
 
 
+    // this factory will continiously return the beacons near it and the distances from these beacons
+    // Calculating the distances from each beacon will take into account the proximity factor and RSSI  
+    // After getting each beacon's distance and, having their absolute position, the absolute position 
+    // of the user is returned.
+    .factory('TriangulationBeaconsService', function ($rootScope) {
+    // location shit
 
-    .factory('TriangulationBeaconsService', function () {
-        // this factory will continiously return the beacons near it and the distances from these beacons 
+    var domData = {message:''};
 
+    var logToDom = function(message){
+        domData.message+=message+'\n';
+    }
+
+    try { //iBeacon Initializtation
+
+        try { // bluetooth is bound and ON
+          // check to see if Bluetooth is ON, if not turn it ON
+          cordova.plugins.locationManager.isBluetoothEnabled()
+            .then(function (isEnabled) {
+              logToDom("BLE isEnabled: " + isEnabled);
+              if (isEnabled) {
+                //cordova.plugins.locationManager.disableBluetooth();
+              } else {
+                cordova.plugins.locationManager.enableBluetooth();
+              }
+            })
+            .fail(function (e) {
+              //console.error(e);
+            //   logToError("isBluetoothEnabled failed because: " + e);
+            })
+            .done();
+        }
+        catch (err) {
+  
+        //   logToError("ERROR Bluetooth:" + err.name + "->" + err.message);
+        }
+  
+        // alert("cordova.plugins.locationManager" + cordova.plugins.locationManager);
+  
+        // create a delegate
+        var delegate = new cordova.plugins.locationManager.Delegate();
+  
+        // // alert('$scope.delegate' + $scope.delegate);
+  
+        // // // called when user enters or exits a region
+        delegate.didDetermineStateForRegion = function (pluginResult) {
+  
+         logToDom('[DOM] didDetermineStateForRegion: ' + JSON.stringify(pluginResult));
+          cordova.plugins.locationManager.requestAlwaysAuthorization();
+          cordova.plugins.locationManager.appendToDeviceLog('[DOM] didDetermineStateForRegion: '
+            + JSON.stringify(pluginResult));
+        };
+  
+        // // called when the monitoring starts
+        var positionalVariables={beaconData:[]}; 
+        // called every second, there is a list of beacons inside data.beacons
+        // will get called even if there are 0 beacons in the list
+        delegate.didRangeBeaconsInRegion = function (pluginResult) {
+          logToDom('[DOM] didRangeBeaconsInRegion: ' + JSON.stringify(pluginResult));
+  
+          var distane = calculateDistanceFromBeacon(pluginResult.beacons[0].tx, pluginResult.beacons[0].rssi);
+          for (var i =0; i< pluginResult.beacons.length; i++){
+              beaconsAndDistances.beaconData.push({major: pluginResult.beacons[i].major, minor:pluginResult.beacons[i].minor,
+                 proximity:pluginResult.beacons[i].proximity, distance: calculateDistanceFromBeacon(pluginResult.beacons[i].tx,pluginResult.beacons[i].rssi)});
+          }
+          logToDom('distance: '+ distane);
+  
+          $rootScope.$apply();
+  
+  
+        };
+        function calculateDistanceFromBeacon(tx, rssi) {
+          return Math.pow(10, (tx - rssi) / 10 * 2.25);
+        }
+  
+        //set the delegate
+        cordova.plugins.locationManager.setDelegate($scope.delegate);
+  
+        // does not work - $scope.uuid = cordova.plugins.locationManager.BeaconRegion.WILDCARD_UUID;
+        var uuid = "b9407f30-f5f8-466e-aff9-25556b57fe6d";
+        var identifier = "c3b74ba25c022e0bb33aa2e2e0004728"; //"bfb7d7eb384e6f18469c02836cd41813";
+        var minor = 1; //45968;
+        var major = 1;//33300;
+  
+        var beaconRegion;
+        //create a Region to monitor
+        try {
+  
+          beaconRegion = new cordova.plugins.locationManager.BeaconRegion($scope.identifier, $scope.uuid, $scope.major, $scope.minor);
+        }
+        catch (err) {
+  
+        //   logToError("ERROR from cordova.plugins.locationManager.BeaconRegion:" + err.name + "->" + err.message);
+        }
+  
+        // alert("beaconRegion:" + $scope.beaconRegion);
+  
+        // // required in iOS 8+
+        // //cordova.plugins.locationManager.requestWhenInUseAuthorization(); 
+        // // or cordova.plugins.locationManager.requestAlwaysAuthorization()
+  
+        cordova.plugins.locationManager.startRangingBeaconsInRegion(beaconRegion)
+          .fail(function (e) {
+            console.error(e);
+        //   logToError("Fail: startMonitoringForRegion > " + e);
+          })
+          .done();
+  
+        // $scope.logToDom("Monitoring Started ....");
+  
+      }
+      catch (err) { // try failed in iBeacon
+  
+        var vDebug = "";
+        for (var prop in err) {
+          vDebug += "property: " + prop + " value: [" + err[prop] + "]\n";
+        }
+        vDebug += "toString(): " + " value: [" + err.toString() + "]";
+  
+        // $scope.logToError("ERROR:" + err.name + "->" + err.message + " details:" + vDebug);
+  
+      }
+        
         function triangulate(a, b, c) { // each object is {lat, long, distance}
             var math = require('mathjs');
             // #assuming elevation = 0
@@ -294,44 +413,9 @@ angular.module('angularApp')
         }
 
 
-        var bluetoothOn = false;
-
-        var beaconsAndDistances = {}; /* This variable will hold an observable object containing all
-         the beacons in proximity and the distances from them*/
-
-        var absolutionPosition = {}; /* tha absolute position of the user calculated using beacon data */
-
-
-        var checkBluetooth = function () {
-            try { // bluetooth is bound and ON
-                // check to see if Bluetooth is ON, if not turn it ON
-                cordova.plugins.locationManager.isBluetoothEnabled()
-                    .then(function (isEnabled) {
-                        $scope.logToDom("BLE isEnabled: " + isEnabled);
-                        if (isEnabled) {
-                            //cordova.plugins.locationManager.disableBluetooth();
-                        } else {
-                            cordova.plugins.locationManager.enableBluetooth();
-                        }
-                    })
-                    .fail(function (e) {
-                        //console.error(e);
-                        $scope.logToError("isBluetoothEnabled failed because: " + e);
-                    })
-                    .done();
-            }
-            catch (err) {
-
-                $scope.logToError("ERROR Bluetooth:" + err.name + "->" + err.message);
-            }
-        }
-
-
-
         return {
-            doTheLocationThing: function () {
-
-            }
+            dom: domData,
+            distances: positionalVariables
         }
 
     })
