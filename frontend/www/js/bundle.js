@@ -516,6 +516,7 @@ angular.module('angularApp')
     //          position: x, y of the user relative to the system's grid
     .factory('TriangulationBeaconsService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
         var beacons = {};
+        var position = {};
         var nearOrImmediateBeacons = [];
         var beaconTag = "BEACON: ";
         var beaconPosition =
@@ -770,9 +771,9 @@ angular.module('angularApp')
                 trilateration.setDistance(2, Number(beacon2distance));
 
                 // Start Calculation
-                var pos = trilateration.calculatePosition();
+                position.pos = trilateration.calculatePosition();
 
-                log("X: " + pos.x + "; Y: " + pos.y); // X: 7; Y: 6.5
+                log("X: " + position.pos.x + "; Y: " + position.pos.y); // X: 7; Y: 6.5
                 // }
             } else {
                 log('Not enough nearby beacons');
@@ -787,6 +788,7 @@ angular.module('angularApp')
 
         return {
             beacons: beacons,
+            position: position
         }
 
     }])

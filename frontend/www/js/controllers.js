@@ -114,11 +114,12 @@ angular.module('angularApp.controllers', [])
     $scope.dists = { distances: TriangulationBeaconsService.distances };
 
     $scope.beacons = { beacons: TriangulationBeaconsService.beacons };
+    $scope.position = {pos: TriangulationBeaconsService.position};
     function logToDom(message) {
       $scope.dom += message + '\n';
     }
     var updateTimer = function () {
-      console.log($scope.beacons);
+      console.log($scope.position.pos);
       $timeout(updateTimer, 5000);
     };
     updateTimer();
