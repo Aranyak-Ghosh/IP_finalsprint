@@ -1,11 +1,7 @@
 angular.module('angularApp.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function ($rootScope, TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading, TriangulationBeaconsService) {
-    
+  .controller('AppController', function ($rootScope, TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading) {
 
-
-    $scope.dom = {data:TriangulationBeaconsService.dom};
-    $scope.distances = {dists:TriangulationBeaconsService.distances.beaconData};
 
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
@@ -105,17 +101,26 @@ angular.module('angularApp.controllers', [])
       }
     }
 
-
-
   })
 
 
   .controller('LandingController', function ($scope, $stateParams) {
   })
 
-  .controller('ExploreController', function ($scope, ServerInterfaceService) {
-    $scope.doStuff = function () {
-      console.log(ServerInterfaceService.req());
+  // Controller of the explore page. This page will have all nearby beacon data available at all times as well as the maps and the 
+  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationBeaconsService) {
+    // $scope.rssi = { RSSI: TriangulationBeaconsService.rssi };
+    console.log('explorer controller is on')
+    $scope.dists = { distances: TriangulationBeaconsService.distances };
+
+    $scope.beacons = { beacons: TriangulationBeaconsService.beacons };
+    $scope.position = { p: TriangulationBeaconsService.position.pos }
+    function logToDom(message) {
+      $scope.dom += message + '\n';
     }
-  })
-  ;
+    var updateTimer = function () {
+      console.log($scope.beacons);
+      $timeout(updateTimer, 5000);
+    };
+    updateTimer();
+  });

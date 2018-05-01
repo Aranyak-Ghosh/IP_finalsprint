@@ -1,3 +1,279 @@
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+function CircularBuffer(capacity){
+	if(!(this instanceof CircularBuffer))return new CircularBuffer(capacity);
+	if(typeof capacity=="object"&&
+		Array.isArray(capacity["_buffer"])&&
+		typeof capacity._capacity=="number"&&
+		typeof capacity._first=="number"&&
+		typeof capacity._size=="number"){
+		for(var prop in capacity){
+			if(capacity.hasOwnProperty(prop))this[prop]=capacity[prop];
+		}
+	} else {
+		if(typeof capacity!="number"||capacity%1!=0||capacity<1)
+			throw new TypeError("Invalid capacity");
+		this._buffer=new Array(capacity);
+		this._capacity=capacity;
+		this._first=0;
+		this._size=0;
+	}
+}
+
+CircularBuffer.prototype={
+	size:function(){return this._size;},
+	capacity:function(){return this._capacity;},
+	enq:function(value){
+		if(this._first>0)this._first--; else this._first=this._capacity-1;
+		this._buffer[this._first]=value;
+		if(this._size<this._capacity)this._size++;
+	},
+	push:function(value){
+		if(this._size==this._capacity){
+			this._buffer[this._first]=value;
+			this._first=(this._first+1)%this._capacity;
+		} else {
+			this._buffer[(this._first+this._size)%this._capacity]=value;
+			this._size++;
+		}
+	},
+	deq:function(){
+		if(this._size==0)throw new RangeError("dequeue on empty buffer");
+		var value=this._buffer[(this._first+this._size-1)%this._capacity];
+		this._size--;
+		return value;
+	},
+	pop:function(){return this.deq();},
+	shift:function(){
+		if(this._size==0)throw new RangeError("shift on empty buffer");
+		var value=this._buffer[this._first];
+		if(this._first==this._capacity-1)this._first=0; else this._first++;
+		this._size--;
+		return value;
+	},
+	get:function(start,end){
+		if(this._size==0&&start==0&&(end==undefined||end==0))return [];
+		if(typeof start!="number"||start%1!=0||start<0)throw new TypeError("Invalid start");
+		if(start>=this._size)throw new RangeError("Index past end of buffer: "+start);
+
+		if(end==undefined)return this._buffer[(this._first+start)%this._capacity];
+
+		if(typeof end!="number"||end%1!=0||end<0)throw new TypeError("Invalid end");
+		if(end>=this._size)throw new RangeError("Index past end of buffer: "+end);
+
+		if(this._first+start>=this._capacity){
+			//make sure first+start and first+end are in a normal range
+			start-=this._capacity; //becomes a negative number
+			end-=this._capacity;
+		}
+		if(this._first+end<this._capacity)
+			return this._buffer.slice(this._first+start,this._first+end+1);
+		else
+			return this._buffer.slice(this._first+start,this._capacity).concat(this._buffer.slice(0,this._first+end+1-this._capacity));
+	},
+	toarray:function(){
+		if(this._size==0)return [];
+		return this.get(0,this._size-1);
+	}
+};
+
+module.exports=CircularBuffer;
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+(function (global, factory) {
+  if (typeof define === "function" && define.amd) {
+    define(['module'], factory);
+  } else if (typeof exports !== "undefined") {
+    factory(module);
+  } else {
+    var mod = {
+      exports: {}
+    };
+    factory(mod);
+    global.stats = mod.exports;
+  }
+})(this, function (module) {
+  var outlierMethod = {
+    MAD: 'MAD',
+    medianDiff: 'medianDiff'
+  };
+
+  function mean(arr) {
+    return arr.reduce(function (prev, curr) {
+      return prev + curr;
+    }) / arr.length;
+  }
+
+  function variance(arr) {
+    var dataMean = mean(arr);
+    return mean(arr.map(function (val) {
+      return Math.pow(val - dataMean, 2);
+    }));
+  }
+
+  function stdev(arr) {
+    return Math.sqrt(variance(arr));
+  }
+
+  function median(arr) {
+    var half = Math.floor(arr.length / 2);
+    arr = arr.slice(0).sort(numSorter);
+
+    if (arr.length % 2) {
+      return arr[half];
+    } else {
+      return (arr[half - 1] + arr[half]) / 2.0;
+    }
+  }
+
+  function medianAbsoluteDeviation(arr, dataMedian) {
+    dataMedian = dataMedian || median(arr);
+    var absoluteDeviation = arr.map(function (val) {
+      return Math.abs(val - dataMedian);
+    });
+    return median(absoluteDeviation);
+  }
+
+  function numSorter(a, b) {
+    return a - b;
+  }
+
+  function isMADoutlier(val, threshold, dataMedian, dataMAD) {
+    return Math.abs(0.6745 * (val - dataMedian) / dataMAD) > threshold;
+  }
+
+  function indexOfMADoutliers(arr, threshold) {
+    threshold = threshold || 3.5;
+    var dataMedian = median(arr);
+    var dataMAD = medianAbsoluteDeviation(arr, dataMedian);
+    return arr.reduce(function (res, val, i) {
+      if (isMADoutlier(val, threshold, dataMedian, dataMAD)) {
+        res.push(i);
+      }
+
+      return res;
+    }, []);
+  }
+
+  function filterMADoutliers(arr, threshold) {
+    threshold = threshold || 3.5;
+    var dataMedian = median(arr);
+    var dataMAD = medianAbsoluteDeviation(arr, dataMedian);
+    return arr.filter(function (val) {
+      return !isMADoutlier(val, threshold, dataMedian, dataMAD);
+    });
+  }
+
+  function differences(arr) {
+    return arr.map(function (d, i) {
+      return Math.round(Math.abs(d - (arr[i - 1] || d[0]))) + 1;
+    });
+  }
+
+  function isMedianDiffOutlier(threshold, difference, medianDiff) {
+    return difference / medianDiff > threshold;
+  }
+
+  function indexOfMedianDiffOutliers(arr, threshold) {
+    threshold = threshold || 3;
+    var differencesArr = differences(arr);
+    var medianDiff = median(differencesArr);
+    return arr.reduce(function (res, val, i) {
+      if (isMedianDiffOutlier(threshold, differencesArr[i], medianDiff)) {
+        res.push(i);
+      }
+
+      return res;
+    }, []);
+  }
+
+  function filterMedianDiffOutliers(arr, threshold) {
+    threshold = threshold || 3;
+    var differencesArr = differences(arr);
+    var medianDiff = median(differencesArr);
+    return arr.filter(function (_, i) {
+      return !isMedianDiffOutlier(threshold, differencesArr[i], medianDiff);
+    });
+  }
+
+  function filterOutliers(arr, method, threshold) {
+    switch (method) {
+      case outlierMethod.MAD:
+        return filterMADoutliers(arr, threshold);
+
+      default:
+        return filterMedianDiffOutliers(arr, threshold);
+    }
+  }
+
+  function indexOfOutliers(arr, method, threshold) {
+    switch (method) {
+      case outlierMethod.MAD:
+        return indexOfMADoutliers(arr, threshold);
+
+      default:
+        return indexOfMedianDiffOutliers(arr, threshold);
+    }
+  }
+
+  module.exports = {
+    stdev: stdev,
+    mean: mean,
+    median: median,
+    MAD: medianAbsoluteDeviation,
+    numSorter: numSorter,
+    outlierMethod: outlierMethod,
+    filterOutliers: filterOutliers,
+    indexOfOutliers: indexOfOutliers,
+    filterMADoutliers: filterMADoutliers,
+    indexOfMADoutliers: indexOfMADoutliers,
+    filterMedianDiffOutliers: filterMedianDiffOutliers,
+    indexOfMedianDiffOutliers: indexOfMedianDiffOutliers
+  };
+});
+},{}],3:[function(require,module,exports){
+// Generated by CoffeeScript 1.8.0
+(function() {
+  var beacons, sqr;
+
+  beacons = [];
+
+  sqr = function(a) {
+    return Math.pow(a, 2);
+  };
+
+  exports.vector = function(x, y) {
+    return {
+      x: x,
+      y: y
+    };
+  };
+
+  exports.setDistance = function(index, distance) {
+    beacons[index].dis = distance;
+  };
+
+  exports.addBeacon = function(index, position) {
+    beacons[index] = position;
+  };
+
+  exports.calculatePosition = function() {
+    var j, k, x, y;
+    if (beacons.length < 3) {
+      console.error("Error! Please add at least three beacons!");
+      return exports.vector(0, 0);
+    }
+    k = (sqr(beacons[0].x) + sqr(beacons[0].y) - sqr(beacons[1].x) - sqr(beacons[1].y) - sqr(beacons[0].dis) + sqr(beacons[1].dis)) / (2 * (beacons[0].y - beacons[1].y)) - (sqr(beacons[0].x) + sqr(beacons[0].y) - sqr(beacons[2].x) - sqr(beacons[2].y) - sqr(beacons[0].dis) + sqr(beacons[2].dis)) / (2 * (beacons[0].y - beacons[2].y));
+    j = (beacons[2].x - beacons[0].x) / (beacons[0].y - beacons[2].y) - (beacons[1].x - beacons[0].x) / (beacons[0].y - beacons[1].y);
+    x = k / j;
+    y = ((beacons[1].x - beacons[0].x) / (beacons[0].y - beacons[1].y)) * x + (sqr(beacons[0].x) + sqr(beacons[0].y) - sqr(beacons[1].x) - sqr(beacons[1].y) - sqr(beacons[0].dis) + sqr(beacons[1].dis)) / (2 * (beacons[0].y - beacons[1].y));
+    return exports.vector(x, y);
+  };
+
+}).call(this);
+
+},{}],4:[function(require,module,exports){
 angular.module('angularApp')
     /*
     * Application to server interface
@@ -566,3 +842,4 @@ angular.module('angularApp')
         }
 
     }])
+},{"../../node_modules/trilateration/index.js":3,"circular-buffer":1,"stats-analysis":2}]},{},[4]);

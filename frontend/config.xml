@@ -85,6 +85,7 @@
         <variable name="GEOLOCATION_USAGE_DESCRIPTION" value="Navigate user around the space" />
     </plugin>
     <plugin name="com.unarin.cordova.beacon" spec="https://github.com/dopry/cordova-plugin-ibeacon.git" />
+    <plugin name="cordova-plugin-console" spec="^1.1.0" />
     <engine name="android" spec="7.0.0" />
     <engine name="ios" spec="4.5.4" />
 </widget>
