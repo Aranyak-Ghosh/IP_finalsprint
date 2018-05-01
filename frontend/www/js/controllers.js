@@ -114,7 +114,6 @@ angular.module('angularApp.controllers', [])
     $scope.dists = { distances: TriangulationBeaconsService.distances };
 
     $scope.beacons = { beacons: TriangulationBeaconsService.beacons };
-    $scope.position = { p: TriangulationBeaconsService.position.pos }
     function logToDom(message) {
       $scope.dom += message + '\n';
     }

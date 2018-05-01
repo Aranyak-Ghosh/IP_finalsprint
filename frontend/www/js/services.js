@@ -217,16 +217,16 @@ angular.module('angularApp')
     })
 
 
-/*
-                        Get all regions' data from the server
-                        Monitor all regions
-                        once you enter a region -> 
-                            start ranging its beacons
-                            Get absolute position of user
-                        Get within range of a region
-                        Download that regions info from the database
-                        start ranging them and getting the exact location of the user
-*/
+    /*
+                            Get all regions' data from the server
+                            Monitor all regions
+                            once you enter a region -> 
+                                start ranging its beacons
+                                Get absolute position of user
+                            Get within range of a region
+                            Download that regions info from the database
+                            start ranging them and getting the exact location of the user
+    */
 
 
 
@@ -235,18 +235,66 @@ angular.module('angularApp')
     // Calculating the distances from each beacon will take into account the proximity factor and RSSI.  
     // After getting each beacon's distance and, having their absolute position, the absolute position 
     // of the user is returned.
-    .factory('TriangulationBeaconsService', ['$timeout', '$rootScope',function ($timeout, $rootScope) {
-        var CircularBuffer = require('circular-buffer');
-        var beacons = {};
-        var regions ={}; // Get all the regions from the server (identifiers and major/minors)
 
-        console.log('TriangulationBeaconService factory is on')
+    // Exposes: beacons: a JSON reference to all nearby beacons
+    //          position: x, y of the user relative to the system's grid
+    .factory('TriangulationBeaconsService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
+        var beacons = {};
+        var nearOrImmediateBeacons = [];
+        var beaconTag = "BEACON: ";
+        var beaconPosition =
+            {
+                major1: {
+                    minor1: {
+                        x: 0,
+                        y: 0
+                    },
+                    minor14867: {
+                        x: 1,
+                        y: 0
+                    },
+                    minor6478: {
+                        x: 0,
+                        y: 1
+                    },
+                    minor62746: {
+                        x: 1,
+                        y: 1
+                    }
+
+                }, major2: {
+                    minor1: {
+                        x: 2,
+                        y: 2.4
+                    },
+                    minor14867: {
+                        x: 1,
+                        y: 1.22
+                    },
+                    minor6478: {
+                        x: 5,
+                        y: 1.45
+                    },
+                    minor62746: {
+                        x: 4,
+                        y: 8
+                    }
+
+                }
+            }
+
+        var universal_uuid = "b9407f30-f5f8-466e-aff9-25556b57fe6d";
+        var identifier = "sdf"
+        var minor = 1; //45968;
+        var major = 2; //33300;
+        var delegate;
+
         function log(message) {
-            console.log(message);
+            console.log(beaconTag + message);
         }
 
-        try { //iBeacon Initializtation
-
+        // initiates the phones bluetooth
+        function initBluetooth() {
             try { // bluetooth is bound and ON
                 // check to see if Bluetooth is ON, if not turn it ON
                 cordova.plugins.locationManager.isBluetoothEnabled()
@@ -263,306 +311,206 @@ angular.module('angularApp')
             }
             catch (err) {
             }
+        }
 
-            // create a delegate
-            var delegate = new cordova.plugins.locationManager.Delegate();
-
-            const bufferSize = 2;
-            // called every second, there is a list of beacons inside data.beacons
-            // will get called even if there are 0 beacons in the list
-            delegate.didRangeBeaconsInRegion = function (pluginResult) {
-                updateBeaconsObjectAtRanging(pluginResult);
-                // console.log(JSON.stringify(pluginResult))
-            };
-            
-            delegate.didEnterRegion = function(pluginResult){
-                console.log('entered region');
-                console.log(JSON.stringify(pluginResult));
-            }
-
-            delegate.didExitRegion = function(pluginResult){
-                console.log('exited region');
-                console.log(JSON.stringify(pluginResult));
-            }
-
-            var updateBeaconsObjectAtRanging = function (pluginResult) {
-                // console.log('There are ' + pluginResult.beacons.length + ' beacons read');
-
-                for (var i = 0; i < pluginResult.beacons.length; i++) {
-                    var stats = require("stats-analysis") // include statistics library 
-                    // creates an entry in the beacons JSON object for each beacon if it doesn't have one
-                    if (!beacons['major' + pluginResult.beacons[i].major]) {
-                        console.log('No entry in beacons for beacons with major = ' + pluginResult.beacons[i].major)
-                        beacons['major' + pluginResult.beacons[i].major] = {};
-                    }
-                    if (!beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]) {
-                        console.log('No entry in beacons[major' + pluginResult.beacons[i].major + '] for beacons with minor = ' + pluginResult.beacons[i].minor)
-                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor] = {}
-                    }
-
-                    // enques the last seen RSSI
-                    beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].rssi = pluginResult.beacons[i].rssi;
-                    // adds the proximity level (might need?)
-                    beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].proximity = pluginResult.beacons[i].proximity;
-                    // adds tx as well
-                    beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].tx = pluginResult.beacons[i].tx;
-                    // if no distances buffer is created, create one
-                    if (!beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer) {
-                        console.log('There was no buffer for beacon ' + i)
-                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer = new CircularBuffer(bufferSize);
-                    }
-                    beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer.enq(
-                        calculateDistanceFromBeacon(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].tx,
-                            beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].rssi
-                        ))
-
-                    beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].distance =
-                        stats.mean(/*stats.filterOutliers(*/beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer.toarray()/*)*/).toFixed(2) * 1;
-                    
-                }
-
-
-
-
-                // console.log(JSON.stringify(beacons));
-                $rootScope.$apply();
-
-            }
-
-            function add(a, b) {
-                return a + b;
-            }
-
-            function calculateDistanceFromBeacon(tx, rssi) {
-                return Math.pow(10, (tx - rssi) / (10 * 2.25));
-            }
-
-            //set the delegate
-            cordova.plugins.locationManager.setDelegate(delegate);
-
-            var uuid = "b9407f30-f5f8-466e-aff9-25556b57fe6d";
-            // var identifier = "c3b74ba25c022e0bb33aa2e2e0004728"; //"bfb7d7eb384e6f18469c02836cd41813";
-            var identifier = "sdf"
-            var minor = 1; //45968;
-            var major = 1;//33300;
-
+        // Creates a BeaconRange based on given information
+        function createBeaconReagon(uuid, identifier, major, minor) {
             var beaconRegion;
-
             try {
-                beaconRegion = new cordova.plugins.locationManager.BeaconRegion(identifier, uuid);
+                if (major) {
+                    if (minor) {
+
+                        beaconRegion = new cordova.plugins.locationManager.BeaconRegion(identifier, uuid, major, minor);
+                    }
+                    else {
+
+                        beaconRegion = new cordova.plugins.locationManager.BeaconRegion(identifier, uuid, major);
+                    }
+                }
+                else
+                    beaconRegion = new cordova.plugins.locationManager.BeaconRegion(identifier, uuid);
             }
             catch (err) {
 
             }
+            return beaconRegion;
+        }
 
-            // // required in iOS 8+
-            // //cordova.plugins.locationManager.requestWhenInUseAuthorization(); 
-            // // or cordova.plugins.locationManager.requestAlwaysAuthorization()
+        // initiate the delegate and set up the callbacks for ranging, finding distances from beacons
+        // and saving all that info in 'beacons'
+        function setupDelegateToRegionBR(beaconR) {
 
-            cordova.plugins.locationManager.startMonitoringForRegion(beaconRegion)
-                .fail(function(e){
-                    console.error(e);
-                })
-                .done();
-            cordova.plugins.locationManager.startRangingBeaconsInRegion(beaconRegion)
-                .fail(function (e) {
-                    console.error(e);
-                    //   logToError("Fail: startMonitoringForRegion > " + e);
-                })
-                .done();
+            try { //iBeacon Initializtation
 
+                // create a delegate
+                delegate = new cordova.plugins.locationManager.Delegate();
+
+                const bufferSize = 2;
+                // called every second, there is a list of beacons inside data.beacons
+                // will get called even if there are 0 beacons in the list
+                delegate.didRangeBeaconsInRegion = function (pluginResult) {
+                    resetNearbyBeaconsList();
+                    // console.log('There are ' + pluginResult.beacons.length + ' beacons read');
+                    var CircularBuffer = require('circular-buffer');
+                    for (var i = 0; i < pluginResult.beacons.length; i++) {
+                        var stats = require("stats-analysis") // include statistics library 
+                        // creates an entry in the beacons JSON object for each beacon if it doesn't have one
+                        if (!beacons['major' + pluginResult.beacons[i].major]) {
+                            log('No entry in beacons for beacons with major = ' + pluginResult.beacons[i].major)
+                            beacons['major' + pluginResult.beacons[i].major] = {};
+                        }
+                        if (!beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]) {
+                            log('No entry in beacons[major' + pluginResult.beacons[i].major + '] for beacons with minor = ' + pluginResult.beacons[i].minor)
+                            beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor] = {}
+                        }
+
+                        // enques the last seen RSSI
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].rssi = pluginResult.beacons[i].rssi;
+                        // adds the proximity level (might need?)
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].proximity = pluginResult.beacons[i].proximity;
+                        // adds tx as well
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].tx = pluginResult.beacons[i].tx;
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].major = pluginResult.beacons[i].major;
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].minor = pluginResult.beacons[i].minor;
+
+                        // if no distances buffer is created, create one
+                        if (!beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer) {
+                            log('There was no buffer for beacon ' + i)
+                            beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer = new CircularBuffer(bufferSize);
+                        }
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer.enq(
+                            calculateDistanceFromBeacon(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].tx,
+                                beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].rssi
+                            ))
+                        var proximity;
+                        if (pluginResult.beacons[i].proximity == "ProximityNear")
+                            proximity = 1;
+                        else if (pluginResult.beacons[i].proximity == "ProximityImmediate")
+                            proximity = 0;
+                        else
+                            proximity = 2;
+
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].proximity = proximity;
+
+                        beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].distance =
+                            stats.mean(/*stats.filterOutliers(*/beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer.toarray()/*)*/).toFixed(2) * 1;
+
+                        if (proximity<2) {
+                            addBeaconToNearbyBeacons(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]);
+                            log(JSON.stringify(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]));
+                        }
+                        
+                    }
+
+                    function add(a, b) {
+                        return a + b;
+                    }
+
+                    function calculateDistanceFromBeacon(tx, rssi) {
+                        return Math.pow(10, (tx - rssi) / (10 * 2.25));
+                    }
+
+                    setPosition();
+
+                    // console.log(JSON.stringify(beacons));
+                    $rootScope.$apply();
+
+                    log('Ranged beacons');
+                };
+
+                //set the delegate
+                cordova.plugins.locationManager.setDelegate(delegate);
+
+                cordova.plugins.locationManager.startMonitoringForRegion(beaconR)
+                    .fail(function (e) { log(e); })
+                    .done();
+                cordova.plugins.locationManager.startRangingBeaconsInRegion(beaconR)
+                    .fail(function (e) {
+                        logerror(e);
+                        //   logToError("Fail: startMonitoringForRegion > " + e);
+                    })
+                    .done();
+
+
+            }
+            catch (err) { // try failed in iBeacon
+
+                var vDebug = "";
+                for (var prop in err) {
+                    vDebug += "property: " + prop + " value: [" + err[prop] + "]\n";
+                }
+                vDebug += "toString(): " + " value: [" + err.toString() + "]";
+
+
+            }
+        }
+
+        function resetNearbyBeaconsList() {
+            nearOrImmediateBeacons = [];
+        }
+
+        function addBeaconToNearbyBeacons(beaconData) {
+            log('Found a close beacon')
             
-        }
-        catch (err) { // try failed in iBeacon
-
-            var vDebug = "";
-            for (var prop in err) {
-                vDebug += "property: " + prop + " value: [" + err[prop] + "]\n";
+            if (nearOrImmediateBeacons.length < 3) {
+                log('There are less than 3 close beacons. Adding this one anyway')
+                nearOrImmediateBeacons.push(beaconData);
             }
-            vDebug += "toString(): " + " value: [" + err.toString() + "]";
-
-
+            else {
+                log('There are already three close beacons. Checking this one')
+                for (var i = 0; i < 3; i++) {
+                    if (nearOrImmediateBeacons[i].proximity>beaconData.proximity){
+                        log('Beacon '+beaconData.major+', '+beaconData.minor + ' will replace' + nearOrImmediateBeacons[i].major+ ', ' + nearOrImmediateBeacons[i].minor)
+                        nearOrImmediateBeacons[i] = beaconData;
+                        return;
+                    }
+                }
+            }
         }
-        var position = { pos: [] }
-        var updating = false;
-        var updatePosition = function () {
-            if (beacons.major1.minor6478 && beacons.major1.minor1 && beacons.major1.minor14867) {
-                console.log('renewing position');
-                var a = { lon: 55.493614200000025, lat: 25.3126148 }
-                a.dist = beacons.major1.minor1.distance;
-                var b = { lon: 55.49362150000002, lat: 25.3126241 }
-                b.dist = beacons.major1.minor14867.distance;
-                var c = { lon: 55.493621899999994, lat: 25.3126303 }
-                c.dist = beacons.major1.minor6478.distance;
-                position.pos = trilaterate([a, b, c]);
-                console.log(JSON.stringify(position));
+
+        // sets position of user relative to system's grid using 'beacons' information
+        function setPosition() {
+            if (nearOrImmediateBeacons.length >= 3) {
+                var beacon0 = {};
+                var beacon0x = beaconPosition['major' + nearOrImmediateBeacons[0].major]['minor' + nearOrImmediateBeacons[0].minor].x;
+                var beacon0y = beaconPosition['major' + nearOrImmediateBeacons[0].major]['minor' + nearOrImmediateBeacons[0].minor].y;
+                var beacon0distance = nearOrImmediateBeacons[0].distance;
+                var beacon1 = {};
+                var beacon1x = beaconPosition['major' + nearOrImmediateBeacons[1].major]['minor' + nearOrImmediateBeacons[1].minor].x;
+                var beacon1y = beaconPosition['major' + nearOrImmediateBeacons[1].major]['minor' + nearOrImmediateBeacons[1].minor].y;
+                var beacon1distance = nearOrImmediateBeacons[1].distance;
+                var beacon2 = {};
+                var beacon2x = beaconPosition['major' + nearOrImmediateBeacons[2].major]['minor' + nearOrImmediateBeacons[2].minor].x;
+                var beacon2y = beaconPosition['major' + nearOrImmediateBeacons[2].major]['minor' + nearOrImmediateBeacons[2].minor].y;
+                var beacon2distance = nearOrImmediateBeacons[2].distance;
                 var trilateration = require('../../node_modules/trilateration/index.js');
-                trilateration.addBeacon(0, trilateration.vector(0,))
+                trilateration.addBeacon(0, trilateration.vector(Number(beacon0x), Number(beacon0y)));
+                trilateration.addBeacon(1, trilateration.vector(Number(beacon1x), Number(beacon1y)));
+                trilateration.addBeacon(2, trilateration.vector(Number(beacon2x), Number(beacon2y)));
+
+                // Setting the beacons distances
+                trilateration.setDistance(0, Number(beacon0distance));
+                trilateration.setDistance(1, Number(beacon1distance));
+                trilateration.setDistance(2, Number(beacon2distance));
+
+                // Start Calculation
+                var pos = trilateration.calculatePosition();
+
+                log("X: " + pos.x + "; Y: " + pos.y); // X: 7; Y: 6.5
+                // }
+            } else {
+                log('Not enough nearby beacons');
             }
-            $timeout(updatePosition, 5000);
-        };
+        }
 
+        initBluetooth();
+        var beaconReagon = createBeaconReagon(universal_uuid, identifier, major);
+        setupDelegateToRegionBR(beaconReagon);
 
-
-        // var trilaterate = function (points) {
-        //     var math = require('mathjs')
-
-        //     // #assuming elevation = 0
-        //     var earthR = 6371
-        //         , rad = function (deg) {
-        //             return deg * (math.pi / 180)
-        //         }
-        //         , deg = function (rad) {
-        //             return rad * (180 / math.pi)
-        //         }
-
-        //     // #using authalic sphere
-        //     // #if using an ellipsoid this step is slightly different
-        //     // #Convert geodetic Lat/Long to ECEF xyz
-        //     // #   1. Convert Lat/Long to radians
-        //     // #   2. Convert Lat/Long(radians) to ECEF
-        //     var P1 = [earthR * (math.cos(rad(points[0].lat)) * math.cos(rad(points[0].lon)))
-        //         , earthR * (math.cos(rad(points[0].lat)) * math.sin(rad(points[0].lon)))
-        //         , earthR * (math.sin(rad(points[0].lat)))
-        //     ]
-
-        //     var P2 = [earthR * (math.cos(rad(points[1].lat)) * math.cos(rad(points[1].lon)))
-        //         , earthR * (math.cos(rad(points[1].lat)) * math.sin(rad(points[1].lon)))
-        //         , earthR * (math.sin(rad(points[1].lat)))
-        //     ]
-
-        //     var P3 = [earthR * (math.cos(rad(points[2].lat)) * math.cos(rad(points[2].lon)))
-        //         , earthR * (math.cos(rad(points[2].lat)) * math.sin(rad(points[2].lon)))
-        //         , earthR * (math.sin(rad(points[2].lat)))
-        //     ]
-
-        //     // #from wikipedia
-        //     // #transform to get circle 1 at origin
-        //     // #transform to get circle 2 on x axis
-        //     var ex = math.divide(math.subtract(P2, P1), math.norm(math.subtract(P2, P1)))
-        //     var i = math.dot(ex, math.subtract(P3, P1))
-
-        //     var ey = math.divide(
-        //         math.subtract(
-        //             math.subtract(P3, P1),
-        //             math.multiply(i, ex)
-        //         ),
-        //         math.norm(
-        //             math.subtract(
-        //                 math.subtract(P3, P1),
-        //                 math.multiply(i, ex)
-        //              )
-        //         )
-        //     )
-
-        //     var ez = math.cross(ex, ey)
-        //     var d = math.norm(math.subtract(P2, P1))
-        //     var j = math.dot(ey, math.subtract(P3, P1))
-
-        //     // #from wikipedia
-        //     // #plug and chug using above values
-        //     var x = (math.pow(Number(points[0].dist), 2) - math.pow(Number(points[1].dist), 2) + math.pow(Number(d), 2)) / (2 * d)
-        //     var y = ((math.pow(Number(points[0].dist), 2) - math.pow(Number(points[2].dist), 2) + math.pow(Number(i), 2) + math.pow(Number(j), 2)) / (2 * j)) - ((i / j) * x)
-
-        //     // # only one case shown here
-        //     //
-        //     // I was having problems with the number in the radical being negative,
-        //     // so I took the absolute value. Not sure if this is always going to work
-        //     var z = math.sqrt(math.abs(math.pow(points[0].dist, 2) - math.pow(x, 2) - math.pow(y, 2)))
-
-        //     // #triPt is an array with ECEF x,y,z of trilateration point
-        //     var triPt = math.add(
-        //         math.add(
-        //             math.add(P1,
-        //                 math.multiply(x, ex)
-        //             ),
-        //             math.multiply(y, ey)
-        //         ),
-        //         math.multiply(z, ez)
-        //     )
-
-        //     // #convert back to lat/long from ECEF
-        //     // #convert to degrees
-        //     var lat = deg(math.asin(math.divide(triPt[2], earthR)))
-        //     var lon = deg(math.atan2(triPt[1], triPt[0]))
-
-        //     return [lat, lon]
-
-        // }
-
-
-
-        // function triangulate(a, b, c) { // each object is {lat, long, distance}
-        //     var math = require('mathjs');
-        //     // #assuming elevation = 0
-        //     earthR = 6371
-        //     LatA = a.latitude;
-        //     LonA = a.longitude;
-        //     DistA = a.distance
-        //     LatB = b.latitude;
-        //     LonB = b.longitude;
-        //     DistB = b.distance
-        //     LatC = c.latitude;
-        //     LonC = c.longitude
-        //     DistC = c.distance
-
-        //     // #using authalic sphere
-        //     // #if using an ellipsoid this step is slightly different
-        //     // #Convert geodetic Lat/Long to ECEF xyz
-        //     // #   1. Convert Lat/Long to radians
-        //     // #   2. Convert Lat/Long(radians) to ECEF
-
-        //     function radians(number) { return number * 3.1456 / 180; }
-        //     function degrees(number) { return number * 180 / 3.1456; }
-        //     xA = earthR * (Math.cos(radians(LatA)) * Math.cos(radians(LonA)))
-        //     yA = earthR * (Math.cos(radians(LatA)) * Math.sin(radians(LonA)))
-        //     zA = earthR * (Math.sin(radians(LatA)))
-
-        //     xB = earthR * (Math.cos(radians(LatB)) * Math.cos(radians(LonB)))
-        //     yB = earthR * (Math.cos(radians(LatB)) * Math.sin(radians(LonB)))
-        //     zB = earthR * (Math.sin(radians(LatB)))
-
-        //     xC = earthR * (Math.cos(radians(LatC)) * Math.cos(radians(LonC)))
-        //     yC = earthR * (Math.cos(radians(LatC)) * Math.sin(radians(LonC)))
-        //     zC = earthR * (Math.sin(radians(LatC)))
-
-        //     P1 = math.matrix([xA, yA, zA])
-        //     P2 = math.matrix([xB, yB, zB])
-        //     P3 = math.matrix([xC, yC, zC])
-
-        //     // #from wikipedia
-        //     // #transform to get circle 1 at origin
-        //     // #transform to get circle 2 on x axis
-        //     ex = math.divide(math.subtract(P2, P1), math.norm(math.subtract(P2, P1)))
-        //     i = math.dot(ex, math.subtract(P3, P1))
-        //     ey = math.divide(math.subtract(math.subtract(P3, P1), (i * ex)), (math.norm(math.subtract(math.subtract(P3, P1), (i * ex)))))
-        //     ez = math.cross(ex, ey)
-        //     d = math.norm(math.subtract(P2, P1))
-        //     j = math.dot(ey, math.subtract(P3, P1))
-
-        //     // #from wikipedia
-        //     // #plug and chug using above values
-        //     x = (Math.pow(DistA, 2) - Math.pow(DistB, 2) + Math.pow(d, 2)) / (2 * d)
-        //     y = ((Math.pow(DistA, 2) - Math.pow(DistC, 2) + Math.pow(i, 2) + Math.pow(j, 2)) / (2 * j)) - ((i / j) * x)
-
-        //     // # only one case shown here
-        //     z = Math.sqrt(Math.pow(DistA, 2) - Math.pow(x, 2) - Math.pow(y, 2))
-
-        //     // #triPt is an array with ECEF x,y,z of trilateration point
-        //     triPt = math.add(math.add(math.add(P1, (math.cross(x, ex)), math.cross(y, ey)), math.cross(z, ez)))
-
-
-        //     // #convert back to lat/long from ECEF
-        //     // #convert to degrees
-        //     lat = degrees(math.asin(math.subset(triPt, math.index(2)) / earthR))
-        //     lon = degrees(math.atan2(math.subset(triPt, math.index(1)), math.subset(triPt, math.index(0))))
-        //     return { latitude: lat, longitude: lon };
-        // }
 
 
         return {
             beacons: beacons,
-            position: position
         }
 
     }])
