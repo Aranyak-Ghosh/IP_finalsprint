@@ -1,13 +1,13 @@
 const NodeCouchDb = require('node-couchdb');
 const logger = require('./logger.js');
 const fs = require('fs');
-const nano=require('nano')('http://localhost:5984');
+const nano = require('nano')('http://localhost:5984');
 
 const couch = new NodeCouchDb();
 
 const projects = 'projects';
 
-const db=nano.use(projects);
+const db = nano.use(projects);
 
 
 module.exports = function base64_encode(file) {
@@ -33,28 +33,42 @@ module.exports = function insert_to_database(img) {
     });
 }
 
-module.exports=function retrieve_projects(room, callback) {
+module.exports = function retrieve_projects(room, callback) {
 
-   db.view('retrieve_projects','room_project',{'keys':[room]}, function(err,body){
-       if(err){
-        logger.error('Error retrieving projects: '+err);
-        callback(err);
-       }
-       else{
-            callback(null,body.rows[0].value);
+    db.view('retrieve_projects', 'room_project', { 'keys': [room] }, function (err, body) {
+        if (err) {
+            logger.error('Error retrieving projects: ' + err);
+            callback(err);
+        }
+        else {
+            callback(null, body.rows[0].value);
             logger.verbose('Returned list of projects');
-       }
-        
-   });
+        }
+
+    });
 }
 
-db.view('retrieve_projects','room_project',{'keys':[3]}, function(err,body){
-    if(err){
-     logger.error('Error retrieving projects: '+err);
-     callback(err);
-    }
-    else{
-         logger.debug(JSON.stringify(body));
-    }
-     
-});
+module.exports = function retrieve_all(callback) {
+    var project_list = [];
+    db.list({ include_docs: true }, function (err, body) {
+
+        if (!err) {
+            body.rows.forEach(element => {
+
+                console.log(element.doc.projects);
+
+                element.doc.projects.forEach(element => {
+                    project_list.push(element);
+                });
+
+            });
+
+            callback(null, project_list);
+
+        }
+        else
+            callback(err);
+    });
+}
+
+retrieve_all();
