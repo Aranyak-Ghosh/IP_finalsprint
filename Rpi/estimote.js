@@ -12,8 +12,11 @@ const room_number = 1;
 const beacons = [{ id: 'A', positon: '(0,0)' }, { id: 'B', positon: '(0,15)' }, { id: 'C', positon: '(15,0)' }, { id: 'D', positon: '(15,15)' }];
 const size = '10x15';
 
+const freq_ms=30000;
 
 const short_to_id = {
+    room: 1,
+    data:'ids',
     'A': 'bf21a232f6e4a3d1',
     'B': '4e091543338907a8',
     'C': 'c3b74ba25c022e0b',
@@ -25,7 +28,7 @@ const topics = {
     rooms: 'COE457/Wayfinding/1',
     last_will: 'COE457/Wayfinding/last_will'
 };
-var mqtt_client = mqtt.connect(broker, { will: { topic: topics.last_will, payload: room_number } });
+var mqtt_client = mqtt.connect(broker);
 
 
 
@@ -37,7 +40,8 @@ function base64_encode(file) {
 }
 
 data = {
-    number: room_number,
+    room: room_number,
+    data: 'config',
     map: base64_encode('/home/aghosh/Desktop/IP_part3/Rpi/public/img/Room1.jpg'),
     size: size,
     beacons: beacons
@@ -54,10 +58,11 @@ var beacon_data = {
 mqtt_client.on('connect', function () {
     logger.verbose('Connected to broker');
     mqtt_client.publish(topics.presence, JSON.stringify(data));
+    mqtt_client.publish(topics.presence,JSON.stringify(short_to_id));
 });
 
 function publish_data() {
-    logger.info('Publishing data to broker');
+    logger.verbose('Publishing data to broker');
     if (beacon_data.A) {
 
         beacon_data.avg = {
@@ -68,7 +73,7 @@ function publish_data() {
     }
 }
 
-setInterval(publish_data, 300000);
+setInterval(publish_data, freq_ms);
 
 // Packest from the Estimote family (Telemetry, Connectivity, etc.) are
 // broadcast as Service Data (per "§ 1.11. The Service Data - 16 bit UUID" from
