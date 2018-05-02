@@ -82,7 +82,7 @@ angular.module('angularApp.controllers', [])
     // responds to failed login
     function failedLogin(message) {
       // $scope.loadingLogin = false;
-      $scope.error = 'Login failed: message';
+      $scope.error = 'Login failed:'+ message;
       $scope.loggedIn = false;
     }
 
@@ -101,7 +101,7 @@ angular.module('angularApp.controllers', [])
 
   })
 
-
+  
   .controller('LandingController', function ($scope, BeaconPositionsFactory) {
 
   })

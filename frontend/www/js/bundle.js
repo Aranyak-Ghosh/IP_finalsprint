@@ -336,7 +336,7 @@ angular.module('angularApp')
             };
             $http(options).then(function (res) {
                 log('logout response: '+res.data);
-                if (res.data=== 'logged out') {
+                if (res.data === 'logged out') {
                     console.log('Server request to logout succeeded');
                     $rootScope.$broadcast('server-logout-succeeded');
                 }
@@ -376,13 +376,13 @@ angular.module('angularApp')
         this.requestProjects = function () {
             var options = {
                 method: 'GET',
-                url: URL,
+                url: URL+'/listallprojects',
             }
             $http(options)
                 .then(function (res) {
                     console.log('Recieved a response to project request');
-                    var projects = JSON.parse(res);
-                    return projects;
+                    var projects = JSON.parse(res.data);
+                    log(JSON.stringify(projects));
                 })
                 .catch(function (error) {
                     console.log('Error while requesting projects: ' + error);
