@@ -477,6 +477,7 @@ angular.module('angularApp')
         function resetNearbyBeaconsList() {
             nearOrImmediateBeacons = [];
         }
+        
 
         // adds a beacon to the nearOrImmediateBeacons based on nearness
         function addBeaconToNearbyBeacons(beaconData) {
