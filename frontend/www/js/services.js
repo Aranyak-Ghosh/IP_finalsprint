@@ -267,9 +267,9 @@ angular.module('angularApp')
         // used for logging
         var beaconTag = "BEACON: ";
         // This array must be in local storage or imported from online
-        var beaconPosition = BeaconPositionsFactory.beaconPosition;
+        var beaconPositionNew = BeaconPositionsFactory.beaconPosition;
 
-        var beaconPositionOld =
+        var beaconPosition =
             {
                 major1: {
                     minor1: {
@@ -553,7 +553,7 @@ angular.module('angularApp')
     }])
 
 
-    .factory('BeaconPositionsFactory', function (ServerInterfaceService) {
+    .factory('BeaconPositionsFactory', function ($rootScope, ServerInterfaceService) {
         // storage references
         var storage = window.localStorage;
         var beaconPositionKey = "beaconPositions"
@@ -568,6 +568,7 @@ angular.module('angularApp')
         init();
 
         var checkRooms = function (roomMajors) {
+            console.log('checking rooms');
             if (beaconPositions) {
                 if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
                     return true;
@@ -581,6 +582,7 @@ angular.module('angularApp')
         }
 
         var requestRoomsWithMajor = function (roomMajors) { // [m1,m2,m3]
+            console.log('requesting rooms')
             for (var i = 0; i < roomMajors.length; i++) {
                 if (!beaconPositions['major' + roomMajors[i]]) {
                     ServerInterfaceService.requestARoomWithMajor(roomMajors[i]);
@@ -592,6 +594,18 @@ angular.module('angularApp')
             beaconPositions['major' + args.major] = {};
             for (var i = 0; i < args.minors.length; i++) {
                 beaconPositions['major' + args.major]['minor' + args.minors[i].number] = args.minors[i].position;
+                updateLocalStorage();
             }
         })
+
+        function updateLocalStorage(){
+            console.log('updating localStorage');
+            storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
+        }
+
+        return {
+            checkRooms:checkRooms,
+            requestARoomWithMajor:requestRoomsWithMajor,
+            beaconPositions: beaconPositions
+        }
     })

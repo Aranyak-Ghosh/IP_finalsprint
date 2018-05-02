@@ -1,7 +1,6 @@
 angular.module('angularApp.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function ($rootScope, TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading) {
-
+  .controller('AppController', function (BeaconPositionsFactory, $rootScope, TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading) {
 
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
@@ -104,7 +103,8 @@ angular.module('angularApp.controllers', [])
   })
 
 
-  .controller('LandingController', function ($scope, $stateParams) {
+  .controller('LandingController', function ($scope, BeaconPositionsFactory) {
+    
   })
 
   // Controller of the explore page. This page will have all nearby beacon data available at all times as well as the maps and the 
