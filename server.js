@@ -1,4 +1,3 @@
-
 const express = require('express');
 const app = express();
 const fs = require('fs');
@@ -7,11 +6,14 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const NodeCouchDb = require('node-couchdb');
-const FileStore = require('session-file-store')(session);
 const uuid = require('uuid/v4');
 const COOKIE = "chipsAhoy";
 
+const redis = require('redis');
 
+const redis_client = redis.createClient();
+
+const redis_config_key='COE457/Wayfinding/';
 const couch = new NodeCouchDb();
 
 let User = require('./user.js');
@@ -33,10 +35,10 @@ app.use(cookieParser());
  */
 app.use(session({
     genid: (req) => {
-        return uuid() // use UUIDs for session IDs
+        return uuid(); // use UUIDs for session IDs
     },
     secret: COOKIE,
-    store: new RedisStore({host:'localhost',port:6379}),
+    store: new RedisStore({ host: 'localhost', port: 6379 }),
     cookie: { maxAge: 60000 },
     resave: false,
     saveUninitialized: true
@@ -101,17 +103,17 @@ app.post('/attemptLogin', urlencodedParser, function (req, res) {
         res.status(200);
         res.send('true');
     }).catch((error) => {
-       
-            if (!error.includes('500')) {
-                res.status(200);
-                res.send(error);
-            }
-            else {
-                res.status(500);
-                res.send(error);
-            }
-        
-        
+
+        if (!error.includes('500')) {
+            res.status(200);
+            res.send(error);
+        }
+        else {
+            res.status(500);
+            res.send(error);
+        }
+
+
     })
 });
 
@@ -136,9 +138,88 @@ app.post('/attemptRegister', urlencodedParser, function (req, res) {
     });
 });
 
-/**
- * Serve Search requests
- */
+
+app.post('/room', urlencodedParser, function (req, res) {
+
+    var beacon = req.body.id;
+
+    //reply should be the room number
+    redis_client.get(beacon, (err, reply) => {
+
+        if (err) {
+
+            logger.error('Redis error: ' + err);
+
+            res.type('text/plain');
+            res.status(500);
+            res.send('500 - Internal Error');
+        }
+        else{
+            //Send map, beacon location, 
+            var room_number=JSON.parse(reply).room;
+            redis_client.get(room_number, (err, reply)=>{
+                if (err) {
+
+                    logger.error('Redis error: ' + err);
+        
+                    res.type('text/plain');
+                    res.status(500);
+                    res.send('500 - Internal Error');
+                }
+                else{
+                    var look_up=JSON.parse(reply);
+                    redis_client.get(redis_config_key+room_number, (err, reply)=>{
+                        if (err) {
+
+                            logger.error('Redis error: ' + err);
+                
+                            res.type('text/plain');
+                            res.status(500);
+                            res.send('500 - Internal Error');
+                        }
+                        else{
+                            var map=JSON.parse(reply).map;
+                            var beacons=JSON.parse(reply).beacons;
+
+                            var re_json={
+                                map:map,
+                                beacons:[]
+                            };
+
+                            for(var x in beacons){
+                                re_json.beacons.push({id:look_up[x],
+                                position:beacons[x]});
+                            }
+
+                            beacons.forEach(element => {
+                                var temp;
+
+                                temp.id=look_up[element.id];
+                                temp.position=element.position;
+
+                                re_json.beacons.push(temp);
+                            });
+
+                            res.status(200);
+                            res.set('Content-Type','text/plain');
+                            res.send(JSON.stringify(re_json));
+                            
+                        }
+                    });
+                }
+            });
+        }
+
+    });
+
+
+});
+
+
+
+
+/*
+
 app.get('/searchLocationString', function (req, res) {
     var query = req.query;
     // search for place in database
@@ -264,6 +345,8 @@ app.get('/projectlist',urlencodedParser,function(req, res){
 
 
 })
+
+*/
 ////////////////
 // custom 404 page
 app.use(function (req, res) {
@@ -287,6 +370,5 @@ app.listen(app.get('port'), function () {
 });
 
 
-/////////////////
 
 

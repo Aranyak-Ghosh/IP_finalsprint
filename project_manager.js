@@ -47,3 +47,14 @@ module.exports=function retrieve_projects(room, callback) {
         
    });
 }
+
+db.view('retrieve_projects','room_project',{'keys':[3]}, function(err,body){
+    if(err){
+     logger.error('Error retrieving projects: '+err);
+     callback(err);
+    }
+    else{
+         logger.debug(JSON.stringify(body));
+    }
+     
+});
