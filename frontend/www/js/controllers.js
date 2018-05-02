@@ -15,15 +15,14 @@ angular.module('angularApp.controllers', [])
     $scope.credentials = {};
 
     // variables indicating currently logged in user information
-    $scope.loggedIn = false;
-    $scope.username = null;
+    $scope.loggedIn = UserService.loggedIn;
+    if ($scope.loggedIn)
+      $scope.username = null;
     $scope.loadingLogin = false;
     $scope.model = { position: 0 };
-    // var updateTimer = function(){
-    //   console.log('updating time')
-    //   $timeout(updateTimer, 5000);
-    // }
-    // updateTimer();
+
+
+
     // Broadcast listener to when user is finally Logged in
     $scope.$on('login-succeeded', function (event, args) {
       applyLogin(args.username);
@@ -31,7 +30,7 @@ angular.module('angularApp.controllers', [])
 
     // Broadcast listener to when log in fails
     $scope.$on('login-failed', function (event, args) {
-      failedLogin();
+      failedLogin(args.message);
     })
 
     // Broadcast listener to when user is logged out
@@ -40,8 +39,8 @@ angular.module('angularApp.controllers', [])
     })
 
     // Broadcast listener to whe user logout fails
-    $scope.$on('logout-failed', function (event) {
-      failedLogout();
+    $scope.$on('logout-failed', function (event, args) {
+      failedLogout(args.message);
     })
 
     // Action when logout succeeds
@@ -51,8 +50,8 @@ angular.module('angularApp.controllers', [])
     }
 
     // Action when logout fails
-    function failedLogout() {
-      $scope.error = 'Failed to log out';
+    function failedLogout(message) {
+      $scope.error = 'Failed to log out: '+message;
     }
 
     // listener to logout button press
@@ -81,9 +80,9 @@ angular.module('angularApp.controllers', [])
     }
 
     // responds to failed login
-    function failedLogin(username) {
+    function failedLogin(message) {
       // $scope.loadingLogin = false;
-      $scope.error = 'Login failed';
+      $scope.error = 'Login failed: message';
       $scope.loggedIn = false;
     }
 
@@ -104,7 +103,7 @@ angular.module('angularApp.controllers', [])
 
 
   .controller('LandingController', function ($scope, BeaconPositionsFactory) {
-    
+
   })
 
   // Controller of the explore page. This page will have all nearby beacon data available at all times as well as the maps and the 
@@ -114,7 +113,7 @@ angular.module('angularApp.controllers', [])
     $scope.dists = { distances: TriangulationBeaconsService.distances };
 
     $scope.beacons = { beacons: TriangulationBeaconsService.beacons };
-    $scope.position = {pos: TriangulationBeaconsService.position};
+    $scope.position = { pos: TriangulationBeaconsService.position };
     function logToDom(message) {
       $scope.dom += message + '\n';
     }

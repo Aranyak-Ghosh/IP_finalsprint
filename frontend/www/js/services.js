@@ -6,50 +6,93 @@ angular.module('angularApp')
     * requests a route using a destination coordinate and user location
     */
     .service('ServerInterfaceService', function ($rootScope, $http) {
-        var URL = 'http://localhost:3005';
+        var URL = 'http://10.25.156.58:8080';
+        var serverLogKey = 'SERVER INTERFACE: ';
+        function log(message) {
+            console.log(serverLogKey + message);
+        }
         this.testInterface = function () {
             return 'testing server interface';
         }
-
 
         /*
         * Sends a login request to the server
         */
         this.serverLogin = function (un, pw) {
+            log('username: ' + un + ', pw: ' + pw);
             var options = {
                 method: 'POST',
-                url: URL + '/login',
+                url: URL + '/attemptLogin',
                 data: { username: un, password: pw }
             }
-            $http(options).then(function () {
-                console.log('Server request to login succeeded')
-                $rootScope.$broadcast('server-login-success', { username: un });
+            log('options: ' + JSON.stringify(options));
+            $http(options).then(function (resp) {
+                if (!(resp.data === 'Incorrect Password')) {
+                    log('Server request to login succeeded')
+                    token = resp.data;
+                    log('Token: ' + token);
+                    $rootScope.$broadcast('server-login-success', { username: un, token: token });
+                }
+                else {
+                    loginFailed('wrong password');
+                }
             })
                 .catch(function (error) {
-                    console.log('Server request to login failed')
-                    $rootScope.$broadcast('server-login-failed');
-                })
+                    loginFailed('server error')
+                });
+
+
+            function loginFailed(message) {
+                console.log('Server request to login failed: '+message)
+                $rootScope.$broadcast('server-login-failed', {message:message});
+            }
+
         }
 
         /*
         * Sends a logout request to the server
         */
-        this.serverLogout = function (un) {
+        this.serverLogout = function (token) {
             var options = {
                 method: 'POST',
                 url: URL + '/logout',
-                data: { username: un }
+                data: { token: token }
             };
-            $http(options).then(function () {
-                console.log('Server request to logout succeeded');
-                $rootScope.$broadcast('server-logout-succeeded');
+            $http(options).then(function (res) {
+                log('logout response: '+res.data);
+                if (res.data=== 'logged out') {
+                    console.log('Server request to logout succeeded');
+                    $rootScope.$broadcast('server-logout-succeeded');
+                }
+                else {
+                    console.log('Server request to logout succeeded but user is already logged out');
+                    $rootScope.$broadcast('server-logout-failed', { message: 'already logged out' });
+                }
             })
                 .catch(function (error) {
                     console.log('Server request to log out failed');
-                    $rootScope.$broadcast('server-lougout-failed');
+                    $rootScope.$broadcast('server-logout-failed', { message: 'server error' });
                 })
         }
 
+        /*
+        * sends a registration request to the server
+        */
+        this.serverRegister = function (username, password, email) {
+            var options = {
+                method: 'POST',
+                url: URL + '/attemptRegister',
+                data: { username: username, password: password, email: email }
+            }
+            $http(options).then(function () {
+                console.log('Server request to register succeeded')
+                $rootScope.$broadcast('server-register-success', { username: un });
+            })
+                .catch(function (error) {
+                    console.log('Server request to register failed')
+                    $rootScope.$broadcast('server-register-failed');
+                })
+        }
 
         /*
         * returns a list of all projects or null if there's an error
@@ -57,7 +100,7 @@ angular.module('angularApp')
         this.requestProjects = function () {
             var options = {
                 method: 'GET',
-                url: URL
+                url: URL,
             }
             $http(options)
                 .then(function (res) {
@@ -142,10 +185,11 @@ angular.module('angularApp')
 
     .service('UserService', function ($rootScope, ServerInterfaceService) {
         var storage = window.localStorage;
-        var loggedInKey = 'loggedIn';
-        var usernameKey = 'username';
-        var loggedIn = storage.getItem(loggedInKey);
-        var username = storage.getItem(usernameKey);
+        var tokenKey = 'TOKEN';
+        var token = storage.getItem(tokenKey);
+        this.loggedIn = false;
+        if (token)
+            this.loggedIn = true;
 
 
         /*
@@ -161,36 +205,33 @@ angular.module('angularApp')
         */
         this.initiateLogout = function () {
             console.log('Attempting logout of UN: ' + username);
-            ServerInterfaceService.serverLogout(username);
+            ServerInterfaceService.serverLogout(token);
         }
 
         /*
         * Broadcast listener to successful login from ServerInterface
         */
         $rootScope.$on('server-login-success', function (event, args) {
-            loggedIn = true;
-            storage.setItem(loggedInKey, loggedIn);
-            username = args.username;
-            storage.setItem(usernameKey, username)
+            this.loggedIn = true;
+            token = args.token;
+            storage.setItem(tokenKey, token);
             $rootScope.$broadcast('login-succeeded', { username: username });
-            console.log('Logged in UN: ' + username)
         })
 
         /*
         * Broadcast listener to failed login from ServerInterface
         */
-        $rootScope.$on('server-login-failed', function (event) {
-            $rootScope.$broadcast('login-failed');
+        $rootScope.$on('server-login-failed', function (event, args) {
+            $rootScope.$broadcast('login-failed', {message:args.message});
         })
 
         /*
         * Broadcast listener to successful logout from ServerInterface
         */
         $rootScope.$on('server-logout-succeeded', function (event) {
-            loggedIn = false;
-            storage.removeItem(loggedInKey);
-            username = null;
-            storage.removeItem(usernameKey);
+            this.loggedIn = false;
+            token = null;
+            storage.removeItem(tokenKey);
             $rootScope.$broadcast('logout-succeeded')
             console.log('Logged out');
         })
@@ -198,13 +239,13 @@ angular.module('angularApp')
         /*
         * Broadcast listener to failed logout from ServerInterface
         */
-        $rootScope.$on('server-logout-failed', function (event) {
-            $rootScope.$broadcast('logout-failed', {});
+        $rootScope.$on('server-logout-failed', function (event, args) {
+            $rootScope.$broadcast('logout-failed', { message: args.message });
         })
 
-
-
     })
+
+
     // Factory to monitor the location of the user
     .factory('TriangulationLocationServicesFactory', function ($rootScope) {
         var positionModel = { longitude: 0, latitude: 0 };
@@ -238,17 +279,6 @@ angular.module('angularApp')
             }
         }
     })
-
-    /*
-                            Get all regions' data from the server
-                            Monitor all regions
-                            once you enter a region -> 
-                                start ranging its beacons
-                                Get absolute position of user
-                            Get within range of a region
-                            Download that regions info from the database
-                            start ranging them and getting the exact location of the user
-    */
 
     // this factory will continiously return the beacons near it and the distances from these beacons.
     // Calculating the distances from each beacon will take into account the proximity factor and RSSI.  
@@ -477,7 +507,7 @@ angular.module('angularApp')
         function resetNearbyBeaconsList() {
             nearOrImmediateBeacons = [];
         }
-        
+
 
         // adds a beacon to the nearOrImmediateBeacons based on nearness
         function addBeaconToNearbyBeacons(beaconData) {
@@ -599,14 +629,22 @@ angular.module('angularApp')
             }
         })
 
-        function updateLocalStorage(){
+        function updateLocalStorage() {
             console.log('updating localStorage');
             storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
         }
 
         return {
-            checkRooms:checkRooms,
-            requestARoomWithMajor:requestRoomsWithMajor,
+            checkRooms: checkRooms,
+            requestARoomWithMajor: requestRoomsWithMajor,
             beaconPositions: beaconPositions
         }
+    })
+
+    .service('NavigationService', function () {
+
+    })
+
+    .factory('RoomInfoFactory', function (ServerInterfaceService) {
+        var roomImages
     })
