@@ -382,6 +382,7 @@ angular.module('angularApp')
                 .then(function (res) {
                     console.log('Recieved a response to project request');
                     var projects = JSON.parse(res.data);
+                    $rootScope.$broadcast('server-recieved-projects', {projects: projects})
                     log(JSON.stringify(projects));
                 })
                 .catch(function (error) {
@@ -456,6 +457,22 @@ angular.module('angularApp')
                 .catch(function (error) {
                     console.log('Server request for room major: ' + major);
                 })
+        }
+    })
+
+    .service('ProjectsService', function($rootScope, ServerInterfaceService){
+        var projectsLog = 'PROJECTS SERVICE: ';
+        var log = function(message){
+            console.log(projectsLog+message);
+        }
+        this.projects;
+        $rootScope.$on('server-recieved-projects', function(event, args){
+            this.projects = args.projects;
+        })
+
+        function requestAllProjects(){
+            log('requesting all messages');
+            ServerInterfaceService.requestProjects();
         }
     })
 
@@ -563,7 +580,7 @@ angular.module('angularApp')
 
     // Exposes: beacons: a JSON reference to all nearby beacons
     //          position: x, y of the user relative to the system's grid
-    .factory('TriangulationBeaconsService', ['$timeout', '$rootScope', function ($timeout, $rootScope, BeaconPositionsFactory) {
+    .factory('TriangulationBeaconsService', ['$timeout', '$rootScope', function ($timeout, $rootScope/*, BeaconPositionsFactory*/) {
         // the list of all beacons around the user
         var beacons = {};
         // the position object (x,y) of the user
@@ -573,7 +590,7 @@ angular.module('angularApp')
         // used for logging
         var beaconTag = "BEACON: ";
         // This array must be in local storage or imported from online
-        var beaconPositionNew = BeaconPositionsFactory.beaconPosition;
+        //var beaconPositionNew = BeaconPositionsFactory.beaconPosition;
 
         var beaconPosition =
             {

@@ -101,6 +101,12 @@ angular.module('angularApp.controllers', [])
 
   })
 
+  .controller('FindAProjectController', function($scope, ServerInterfaceService){
+    $scope.getProjects =function(){
+      ServerInterfaceService.requestProjects();
+    }
+  })
+
   
   .controller('LandingController', function ($scope, BeaconPositionsFactory) {
 
