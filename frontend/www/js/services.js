@@ -216,7 +216,6 @@ angular.module('angularApp')
         }
     })
 
-
     /*
                             Get all regions' data from the server
                             Monitor all regions
@@ -228,9 +227,6 @@ angular.module('angularApp')
                             start ranging them and getting the exact location of the user
     */
 
-
-
-
     // this factory will continiously return the beacons near it and the distances from these beacons.
     // Calculating the distances from each beacon will take into account the proximity factor and RSSI.  
     // After getting each beacon's distance and, having their absolute position, the absolute position 
@@ -239,10 +235,10 @@ angular.module('angularApp')
     // Exposes: beacons: a JSON reference to all nearby beacons
     //          position: x, y of the user relative to the system's grid
     .factory('TriangulationBeaconsService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
-        var beacons = {};
-        var position = {};
-        var nearOrImmediateBeacons = [];
-        var beaconTag = "BEACON: ";
+        var beacons = {}; // the list of all beacons around the use r
+        var position = {}; // the position object (x,y) of the user
+        var nearOrImmediateBeacons = []; // list of the nearest beacons to the user
+        var beaconTag = "BEACON: "; // used for logging
         var beaconPosition =
             {
                 major1: {
@@ -396,11 +392,11 @@ angular.module('angularApp')
                         beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].distance =
                             stats.mean(/*stats.filterOutliers(*/beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor].buffer.toarray()/*)*/).toFixed(2) * 1;
 
-                        if (proximity<2) {
+                        if (proximity < 2) {
                             addBeaconToNearbyBeacons(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]);
                             log(JSON.stringify(beacons['major' + pluginResult.beacons[i].major]['minor' + pluginResult.beacons[i].minor]));
                         }
-                        
+
                     }
 
                     function add(a, b) {
@@ -446,13 +442,15 @@ angular.module('angularApp')
             }
         }
 
+        // resets the nearOrImmediateBeacons list
         function resetNearbyBeaconsList() {
             nearOrImmediateBeacons = [];
         }
 
+        // adds a beacon to the nearOrImmediateBeacons based on nearness
         function addBeaconToNearbyBeacons(beaconData) {
             log('Found a close beacon')
-            
+
             if (nearOrImmediateBeacons.length < 3) {
                 log('There are less than 3 close beacons. Adding this one anyway')
                 nearOrImmediateBeacons.push(beaconData);
@@ -460,8 +458,8 @@ angular.module('angularApp')
             else {
                 log('There are already three close beacons. Checking this one')
                 for (var i = 0; i < 3; i++) {
-                    if (nearOrImmediateBeacons[i].proximity>beaconData.proximity){
-                        log('Beacon '+beaconData.major+', '+beaconData.minor + ' will replace' + nearOrImmediateBeacons[i].major+ ', ' + nearOrImmediateBeacons[i].minor)
+                    if (nearOrImmediateBeacons[i].proximity > beaconData.proximity) {
+                        log('Beacon ' + beaconData.major + ', ' + beaconData.minor + ' will replace' + nearOrImmediateBeacons[i].major + ', ' + nearOrImmediateBeacons[i].minor)
                         nearOrImmediateBeacons[i] = beaconData;
                         return;
                     }
@@ -507,8 +505,6 @@ angular.module('angularApp')
         initBluetooth();
         var beaconReagon = createBeaconReagon(universal_uuid, identifier, major);
         setupDelegateToRegionBR(beaconReagon);
-
-
 
         return {
             beacons: beacons,
