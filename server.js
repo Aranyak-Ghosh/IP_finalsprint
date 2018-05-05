@@ -17,6 +17,8 @@ const redis_config_key = 'COE457/Wayfinding/';
 const couch = new NodeCouchDb();
 
 let User = require('./user.js');
+let project_manager=require('./project_manager.js');
+
 
 app.set('port', process.env.PORT || 8080);
 
@@ -181,9 +183,9 @@ app.post('/room', urlencodedParser, function (req, res) {
 
     });
 });
-
+/*
 app.get('/listallprojects', function (req, res) {
-    retrieve_all(function(err,list){
+    project_manager.retrieve_all(function(err,list){
         if(!err){
             res.status(200);
             res.send(list);
@@ -192,7 +194,7 @@ app.get('/listallprojects', function (req, res) {
             res.sendStatus(500);
     });
 });
-
+*/
 
 app.post('/logout', urlencodedParser, function (req, res) {
 

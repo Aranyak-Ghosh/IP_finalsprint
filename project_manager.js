@@ -15,25 +15,9 @@ module.exports = function base64_encode(file) {
     return fs.readFileSync(file, 'base64');
 }
 
-/**
- * Function to insert a list of images to a room. 
- * @param img JSON object with attributes: 
- *      room (room number),
- *      project (array of JSON objects with each object having the following parameters: 
- *          image: base_64 encoded string form of the image,
- *          title: title of the project,
- *          artists: Name(s) of the artist)
- */
 
-module.exports = function insert_to_database(img) {
-    couch.insert(projects, img).then(({ data, headers, status }) => {
-        logger.verbose('Inserted images to the database');
-    }, err => {
-        logger.error('Error inserting images to database: ' + JSON.stringify(err));
-    });
-}
 
-module.exports = function retrieve_projects(room, callback) {
+module.exports.retrieve_projects = function (room, callback) {
 
     db.view('retrieve_projects', 'room_project', { 'keys': [room] }, function (err, body) {
         if (err) {
@@ -48,18 +32,22 @@ module.exports = function retrieve_projects(room, callback) {
     });
 }
 
-module.exports = function retrieve_all(callback) {
+module.exports.retrieve_all = function (callback) {
     var project_list = [];
     db.list({ include_docs: true }, function (err, body) {
 
         if (!err) {
             body.rows.forEach(element => {
 
-                console.log(element.doc.projects);
+                var arr = element.doc.projects;
+                if (typeof arr != 'undefined') {
+                    arr.forEach(pro => {
 
-                element.doc.projects.forEach(element => {
-                    project_list.push(element);
-                });
+
+                    });
+
+                }
+
 
             });
 
@@ -71,4 +59,48 @@ module.exports = function retrieve_all(callback) {
     });
 }
 
-retrieve_all();
+
+module.exports.add_project = function (img) {
+    var dir = 'public/img/projects/' + img.room + '/';
+
+    fs.mkdir(__dirname+dir, function (err) {
+        if (err && err.code != 'EEXIST') {
+            console.log(err);
+        }
+        else {
+            fs.writeFile(__dirname + dir + img.title, img.image, { encoding: 'base64' }, function (err) {
+                if (!err) {
+                    console.log('File created');
+                    db.view('retrieve_projects', 'room_project', { 'keys': [img.room] }, function (err, body) {
+                        if (err) {
+                            logger.error('Error retrieving projects: ' + err);
+                            callback(err);
+                        }
+                        else {
+                            if (body.total_rows == body.offset) {
+                                //TODO create document for room
+                                
+                            }
+                            else {
+                                //TODO update database   
+
+                            }
+
+                        }
+
+                    });
+                }
+                else {
+                    console.log(err);
+                }
+            });
+        }
+    });
+}
+
+function generateid() {
+    var ids;
+    couch.uniqid().then(ids => ids[0]);
+    return ids;
+}
+

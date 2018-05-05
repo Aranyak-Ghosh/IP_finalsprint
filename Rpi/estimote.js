@@ -8,12 +8,22 @@ const logger = require('./logger.js');
 
 const broker = 'mqtt://broker.mqttdashboard.com';
 
+
+/**
+ * CONSTANTS for the room
+ */
 const room_number = 1;
 const beacons = [{ id: 'A', positon: '(0,0)' }, { id: 'B', positon: '(0,15)' }, { id: 'C', positon: '(15,0)' }, { id: 'D', positon: '(15,15)' }];
 const size = '10x15';
 
+/**
+ * Publishing frequency in ms
+ */
 const freq_ms=30000;
 
+/**
+ * JSON object for converting beacon ids to tags (A/B/C/D)
+ */
 const short_to_id = {
     room: 1,
     data:'ids',
@@ -28,17 +38,28 @@ const topics = {
     rooms: 'COE457/Wayfinding/1',
     last_will: 'COE457/Wayfinding/last_will'
 };
+
 var mqtt_client = mqtt.connect(broker);
-
-
 
 var data;
 
+
+/**
+ * function to convert image files to base_64 encoded strings
+ */
 function base64_encode(file) {
     logger.verbose('Converting ' + file + ' to Base64');
     return fs.readFileSync(file, 'base64');
 }
 
+/**
+ * Basic configuration data for the room
+ * attributes: room-> identifier for each room
+ *             data-> identifier for the message to distinguish between messages
+ *             map-> base64 encoded string of room map
+ *             size-> size of the room to set up our coordinate system for the room (in this case the room is assumed to be 10mx15m)
+ *             beacons-> position of the beacons in the room based on the coordinate system set up from the size
+ */
 data = {
     room: room_number,
     data: 'config',
@@ -47,6 +68,10 @@ data = {
     beacons: beacons
 };
 
+/**
+ * JSON object which gets updated by beacon data
+ * 
+ */
 var beacon_data = {
     number: 1,
     A: null,
@@ -55,14 +80,17 @@ var beacon_data = {
     D: null
 };
 
+
 mqtt_client.on('connect', function () {
     logger.verbose('Connected to broker');
     mqtt_client.publish(topics.presence, JSON.stringify(data));
     mqtt_client.publish(topics.presence,JSON.stringify(short_to_id));
 });
 
+
 function publish_data() {
     logger.verbose('Publishing data to broker');
+    console.log('Publishing to broker');
     if (beacon_data.A) {
 
         beacon_data.avg = {

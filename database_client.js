@@ -41,11 +41,14 @@ mqtt_client.on('connect', function () {
     logger.verbose('Subscribed to Presence');
 });
 
+
+
 mqtt_client.on('message', function (topic, m_buff) {
 
     logger.debug(m_buff.toString());
 
     var message = m_buff.toString();
+
     if (topic === topics.presence) {
         if (!(message == 'Server running')) {
             m = JSON.parse(message);
@@ -62,13 +65,26 @@ mqtt_client.on('message', function (topic, m_buff) {
 
                 var temp = {
                     beacons: m.beacons,
-                    size: m.size,
-                    map: m.map
+                    size: m.size
                 };
 
-                rooms.push(temp);
+                var dir = __dirname + 'public/img/maps/' + m.room + '/';
 
-                
+                fs.mkdir(dir, function (err) {
+                    if (err && err.code != 'EEXIST') {
+                        logger.error(err);
+                    }
+                    else {
+                        fs.writeFile(dir + img.title, img.image, { encoding: 'base64' }, function (err) {
+                            if (!err) {
+                                logger.verbose('Room map added');
+                            }
+                            else
+                                logger.error(err);
+                        });
+                    }
+                });
+                rooms.push(temp);
 
                 db.view('get_room', 'rooms', { 'keys': [m.room] }, function (err, body) {
                     if (err) {
@@ -160,13 +176,12 @@ mqtt_client.on('message', function (topic, m_buff) {
         console.log('Message received');
         logger.debug(JSON.stringify(room_data));
         console.log(message);
-        
 
         db.view('get_room', 'rooms', { 'keys': [room_data.number] }, function (err, body) {
             if (err)
                 logger.error(err);
             else {
-                
+
                 console.log(JSON.stringify(body));
 
                 logger.debug(JSON.stringify(body));
@@ -174,12 +189,12 @@ mqtt_client.on('message', function (topic, m_buff) {
 
                 delete room_data.number;
 
-                data.beacon_data=room_data;
+                data.beacon_data = room_data;
 
 
-                couchdb.update(room_list,data).then(({data,headers,status})=>{
+                couchdb.update(room_list, data).then(({ data, headers, status }) => {
                     logger.verbose('Updated document');
-                }, err=>{
+                }, err => {
                     logger.error(err);
                 });
 
