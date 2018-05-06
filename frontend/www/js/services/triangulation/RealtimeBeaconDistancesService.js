@@ -1,62 +1,20 @@
+// This service encapsulates the process of reading beacon packets and detecting the three nearest beacon distances.
+// It triggers the 'calculate-position' event in its parent facade class TriangulationService with the nearest beacons.
+// Exposes one function; init(uuid) which initiates the detection of BLE packets
 angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
     var universal_uuid;
     var init = function (uuid) {
         universal_uuid = uuid;
+        initBluetooth();
+        var beaconReagon = createBeaconReagon(universal_uuid, identifier);
+        setupDelegateToRegionBR(beaconReagon);
     }
     // the list of all beacons around the user
     var beacons = {};
-    // the position object (x,y) of the user
-    var position = {};
     // list of the nearest three beacons to the user
     var nearOrImmediateBeacons = [];
     // used for logging
     var beaconTag = "REALTIME BEACON DISTANCES: ";
-    // This array must be in local storage or imported from online
-    // var beaconPositionNew = BeaconPositionsFactory.beaconPosition;
-    var nearOrImmediateBeacons = [];
-    var beaconPosition =
-        {
-            major1: {
-                minor1: {
-                    x: 0,
-                    y: 0
-                },
-                minor14867: {
-                    x: 1,
-                    y: 0
-                },
-                minor6478: {
-                    x: 0,
-                    y: 1
-                },
-                minor62746: {
-                    x: 1,
-                    y: 1
-                }
-
-            }, major2: {
-                minor1: {
-                    x: 2,
-                    y: 2.4
-                },
-                minor14867: {
-                    x: 1,
-                    y: 1.22
-                },
-                minor6478: {
-                    x: 5,
-                    y: 1.45
-                },
-                minor62746: {
-                    x: 4,
-                    y: 8
-                }
-
-            }
-        }
-
-
-
     var identifier = "sdf"
     var delegate;
 
@@ -106,7 +64,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
         }
         return beaconRegion;
     }
-
 
     // initiate the delegate and set up the callbacks for ranging, finding distances from beacons
     // and saving all that info in 'beacons'
@@ -193,7 +150,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
 
                 // console.log(JSON.stringify(beacons));
                 // $rootScope.$apply();
-                    $rootScope.$emit('calculate-position');
                 log('Ranged beacons');
             };
 
@@ -229,7 +185,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
         nearOrImmediateBeacons = [];
     }
 
-
     // adds a beacon to the nearOrImmediateBeacons based on nearness
     function addBeaconToNearbyBeacons(beaconData) {
         log('Found a close beacon')
@@ -244,20 +199,19 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
                 if (nearOrImmediateBeacons[i].proximity > beaconData.proximity) {
                     log('Beacon ' + beaconData.major + ', ' + beaconData.minor + ' will replace' + nearOrImmediateBeacons[i].major + ', ' + nearOrImmediateBeacons[i].minor)
                     nearOrImmediateBeacons[i] = beaconData;
-                    return;
+                    break;
                 }
             }
         }
+        if (nearOrImmediateBeacons.length>=3){
+            log('Sending signal to calculate a new position ...')
+            // since there are three or more nearby beacons, it is possible to calculate position of user
+            $rootScope.$emit('calculate-position', {nearbyBeacons: nearOrImmediateBeacons});
+        }
     }
 
-    initBluetooth();
-    var beaconReagon = createBeaconReagon(universal_uuid, identifier);
-    setupDelegateToRegionBR(beaconReagon);
-
     return {
-        init: init,
-        nearOrImmediateBeacons: nearOrImmediateBeacons,
-        position: position
+        init: init
     }
 
 }])

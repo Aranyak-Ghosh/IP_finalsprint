@@ -722,6 +722,7 @@ angular.module('angularApp')
 // Exposes: beacons: a JSON reference to all nearby beacons
 //          position: x, y of the user relative to the system's grid
 
+// Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
 
 angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, ServerInterfaceService) {
     // storage references
@@ -741,17 +742,18 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     init();
 
     var checkRooms = function (roomMajors) {
-        console.log('checking rooms');
-        if (beaconPositions) {
-            if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        else {
-            return false;
-        }
+        return true;
+        // console.log('checking rooms');
+        // if (beaconPositions) {
+        //     if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
+        //         return true;
+        //     } else {
+        //         return false;
+        //     }
+        // }
+        // else {
+        //     return false;
+        // }
     }
 
     var requestRoomsWithMajor = function (roomMajors) { // [m1,m2,m3]
@@ -776,35 +778,6 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
     }
 
-    return {
-        init:init,
-        checkRooms: checkRooms,
-        requestARoomWithMajor: requestRoomsWithMajor,
-        beaconPositions: beaconPositions
-    }
-})
-
-},{}],12:[function(require,module,exports){
-angular.module('angularApp').factory('CenterlizationService', function ($rootScope, ServerInterfaceService) {
-return{};
-})
-},{}],13:[function(require,module,exports){
-angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
-    var universal_uuid;
-    var init = function (uuid) {
-        universal_uuid = uuid;
-    }
-    // the list of all beacons around the user
-    var beacons = {};
-    // the position object (x,y) of the user
-    var position = {};
-    // list of the nearest three beacons to the user
-    var nearOrImmediateBeacons = [];
-    // used for logging
-    var beaconTag = "REALTIME BEACON DISTANCES: ";
-    // This array must be in local storage or imported from online
-    // var beaconPositionNew = BeaconPositionsFactory.beaconPosition;
-    var nearOrImmediateBeacons = [];
     var beaconPosition =
         {
             major1: {
@@ -846,8 +819,41 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
             }
         }
 
+    var getBeaconPositions = function(){
+        return beaconPosition;
+        // return beaconPositions;
+    }
 
+    return {
+        init:init,
+        checkRooms: checkRooms,
+        requestARoomWithMajor: requestRoomsWithMajor,
+        getBeaconPositions: getBeaconPositions
+    }
+})
 
+},{}],12:[function(require,module,exports){
+angular.module('angularApp').factory('CenterlizationService', function ($rootScope, ServerInterfaceService) {
+return{};
+})
+},{}],13:[function(require,module,exports){
+// This service encapsulates the process of reading beacon packets and detecting the three nearest beacon distances.
+// It triggers the 'calculate-position' event in its parent facade class TriangulationService with the nearest beacons.
+// Exposes one function; init(uuid) which initiates the detection of BLE packets
+angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeout', '$rootScope', function ($timeout, $rootScope) {
+    var universal_uuid;
+    var init = function (uuid) {
+        universal_uuid = uuid;
+        initBluetooth();
+        var beaconReagon = createBeaconReagon(universal_uuid, identifier);
+        setupDelegateToRegionBR(beaconReagon);
+    }
+    // the list of all beacons around the user
+    var beacons = {};
+    // list of the nearest three beacons to the user
+    var nearOrImmediateBeacons = [];
+    // used for logging
+    var beaconTag = "REALTIME BEACON DISTANCES: ";
     var identifier = "sdf"
     var delegate;
 
@@ -897,7 +903,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
         }
         return beaconRegion;
     }
-
 
     // initiate the delegate and set up the callbacks for ranging, finding distances from beacons
     // and saving all that info in 'beacons'
@@ -984,7 +989,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
 
                 // console.log(JSON.stringify(beacons));
                 // $rootScope.$apply();
-                    $rootScope.$emit('calculate-position');
                 log('Ranged beacons');
             };
 
@@ -1020,7 +1024,6 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
         nearOrImmediateBeacons = [];
     }
 
-
     // adds a beacon to the nearOrImmediateBeacons based on nearness
     function addBeaconToNearbyBeacons(beaconData) {
         log('Found a close beacon')
@@ -1035,20 +1038,19 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
                 if (nearOrImmediateBeacons[i].proximity > beaconData.proximity) {
                     log('Beacon ' + beaconData.major + ', ' + beaconData.minor + ' will replace' + nearOrImmediateBeacons[i].major + ', ' + nearOrImmediateBeacons[i].minor)
                     nearOrImmediateBeacons[i] = beaconData;
-                    return;
+                    break;
                 }
             }
         }
+        if (nearOrImmediateBeacons.length>=3){
+            log('Sending signal to calculate a new position ...')
+            // since there are three or more nearby beacons, it is possible to calculate position of user
+            $rootScope.$emit('calculate-position', {nearbyBeacons: nearOrImmediateBeacons});
+        }
     }
 
-    initBluetooth();
-    var beaconReagon = createBeaconReagon(universal_uuid, identifier);
-    setupDelegateToRegionBR(beaconReagon);
-
     return {
-        init: init,
-        nearOrImmediateBeacons: nearOrImmediateBeacons,
-        position: position
+        init: init
     }
 
 }])
@@ -1058,77 +1060,86 @@ angular.module('angularApp').service('TriangulationService', function ($rootScop
     var universal_uuid;
     var nearbyBeacons;
     var beaconPositions;
+    var position = { p: '' };
     const triangulationLog = "TRIANGULATION: "
     function log(message) {
         console.log(triangulationLog + message)
     }
     var init = function (uuid) {
+        log('Starting up triangulation with uuid:' + uuid)
         universal_uuid = uuid;
         RealtimeBeaconDistancesService.init(universal_uuid);
         BeaconPositionsFactory.init(universal_uuid);
     }
 
-    nearbyBeacons = RealtimeBeaconDistancesService.nearOrImmediateBeacons;
-    beaconPositions = BeaconPositionsFactory.beaconPositions;
-
-    $rootScope.$on('calculate-position', function (event) {
-        setPosition();
+    // At ranging of beacons, calculate the new position of the user
+    $rootScope.$on('calculate-position', function (event, args) {
+        log('Recieved \'calculate-position\' broadcast')
+        nearbyBeacons = args.nearbyBeacons;
+        var majorsOfCurrentRooms = [];
+        nearbyBeacons.forEach(element => {
+            majorsOfCurrentRooms.push(element.major);
+        });
+        log('majors of current room(s): ' + JSON.stringify(majorsOfCurrentRooms));
+        if (BeaconPositionsFactory.checkRooms(majorsOfCurrentRooms)) {
+            log('Required beacon positions of rooms: ' + JSON.stringify(majorsOfCurrentRooms) + ' to trilaterate are stored. Trilaterating ....');
+            beaconPositions = BeaconPositionsFactory.getBeaconPositions();
+            setPosition(); // must call the centrelization service to get the new position on the map
+        }
+        else {
+            log('Required information to trilaterate is not stored. Requesting information ...');
+            BeaconPositionsFactory.requestRoomsWithMajor(majorsOfCurrentRooms);
+        }
     });
     // sets position of user relative to system's grid using 'beacons' information
     function setPosition() {
         // checks to see if there are three closeby (immediate or near) beacons
         if (nearbyBeacons.length >= 3) {
-            var majorsOfCurrentRooms;
-            nearbyBeacons.array.forEach(element => {
-                majorsOfCurrentRooms.push(element.major);
-            });
-            if (BeaconPositionsFactory.checkRooms(majorsOfCurrentRooms)) {
-                try {
-                    log('Required information to trilaterate is stored. Trilaterating ....');
-                    // uses absolute position of the three nearby beacns and the distance from them to get
-                    // an estimate of the actual position
-                    var beacon0 = {};
-                    var beacon0x = beaconPositions['major' + nearbyBeacons[0].major]['minor' + nearbyBeacons[0].minor].x;
-                    var beacon0y = beaconPositions['major' + nearbyBeacons[0].major]['minor' + nearbyBeacons[0].minor].y;
-                    var beacon0distance = nearbyBeacons[0].distance;
-                    var beacon1 = {};
-                    var beacon1x = beaconPositions['major' + nearbyBeacons[1].major]['minor' + nearbyBeacons[1].minor].x;
-                    var beacon1y = beaconPositions['major' + nearbyBeacons[1].major]['minor' + nearbyBeacons[1].minor].y;
-                    var beacon1distance = nearbyBeacons[1].distance;
-                    var beacon2 = {};
-                    var beacon2x = beaconPositions['major' + nearbyBeacons[2].major]['minor' + nearbyBeacons[2].minor].x;
-                    var beacon2y = beaconPositions['major' + nearbyBeacons[2].major]['minor' + nearbyBeacons[2].minor].y;
-                    var beacon2distance = nearbyBeacons[2].distance;
-                    var trilateration = require('../../../../node_modules/trilateration/index.js');
-                    trilateration.addBeacon(0, trilateration.vector(Number(beacon0x), Number(beacon0y)));
-                    trilateration.addBeacon(1, trilateration.vector(Number(beacon1x), Number(beacon1y)));
-                    trilateration.addBeacon(2, trilateration.vector(Number(beacon2x), Number(beacon2y)));
+            try {
+                // uses absolute position of the three nearby beacns and the distance from them to get
+                // an estimate of the actual position
+                var beacon0 = {};
+                var beacon0x = beaconPositions['major' + nearbyBeacons[0].major]['minor' + nearbyBeacons[0].minor].x;
+                var beacon0y = beaconPositions['major' + nearbyBeacons[0].major]['minor' + nearbyBeacons[0].minor].y;
+                var beacon0distance = nearbyBeacons[0].distance;
+                var beacon1 = {};
+                var beacon1x = beaconPositions['major' + nearbyBeacons[1].major]['minor' + nearbyBeacons[1].minor].x;
+                var beacon1y = beaconPositions['major' + nearbyBeacons[1].major]['minor' + nearbyBeacons[1].minor].y;
+                var beacon1distance = nearbyBeacons[1].distance;
+                var beacon2 = {};
+                var beacon2x = beaconPositions['major' + nearbyBeacons[2].major]['minor' + nearbyBeacons[2].minor].x;
+                var beacon2y = beaconPositions['major' + nearbyBeacons[2].major]['minor' + nearbyBeacons[2].minor].y;
+                var beacon2distance = nearbyBeacons[2].distance;
+                var trilateration = require('../../../../node_modules/trilateration/index.js');
+                trilateration.addBeacon(0, trilateration.vector(Number(beacon0x), Number(beacon0y)));
+                trilateration.addBeacon(1, trilateration.vector(Number(beacon1x), Number(beacon1y)));
+                trilateration.addBeacon(2, trilateration.vector(Number(beacon2x), Number(beacon2y)));
 
-                    // Setting the beacons distances
-                    trilateration.setDistance(0, Number(beacon0distance));
-                    trilateration.setDistance(1, Number(beacon1distance));
-                    trilateration.setDistance(2, Number(beacon2distance));
+                // Setting the beacons distances
+                trilateration.setDistance(0, Number(beacon0distance));
+                trilateration.setDistance(1, Number(beacon1distance));
+                trilateration.setDistance(2, Number(beacon2distance));
 
-                    // Start Calculation
-                    position.pos = trilateration.calculatePosition();
+                // Start Calculation
+                position.pos = trilateration.calculatePosition();
 
-                    log("X: " + position.pos.x + "; Y: " + position.pos.y); // X: 7; Y: 6.5
+                log("X: " + position.pos.x + "; Y: " + position.pos.y); // X: 7; Y: 6.5
 
 
-                }
-                catch (e) {
-                    log('Error while calculating position: ' + e);
-                }
             }
-            else {
-                log('Required information to trilaterate is not stored. Requesting information ...');
-                BeaconPositionsFactory.requestRoomsWithMajor(majorsOfCurrentRooms);
+            catch (e) {
+                log('Error while calculating position: ' + e);
             }
         }
         else {
             log('Not enough nearby beacons');
         }
-    } 
+    }
+
+    return {
+        init: init,
+        position: position.pos
+    }
 
 })
 },{"../../../../node_modules/trilateration/index.js":3}]},{},[4]);

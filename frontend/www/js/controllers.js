@@ -118,6 +118,7 @@ angular.module('angularApp.controllers', [])
   .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService) {
     console.log('explorer controller is on')
     $scope.URL = 'http://10.25.156.58:8080';
+    TriangulationService.init('b9407f30-f5f8-466e-aff9-25556b57fe6d');
     ProjectsService.init();
     ProjectsService.requestAllProjects();
     $scope.projects = ProjectsService.returnProjectArray();

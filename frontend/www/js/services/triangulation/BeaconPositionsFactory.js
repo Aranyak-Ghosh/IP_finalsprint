@@ -6,6 +6,7 @@
 // Exposes: beacons: a JSON reference to all nearby beacons
 //          position: x, y of the user relative to the system's grid
 
+// Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
 
 angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, ServerInterfaceService) {
     // storage references
@@ -25,17 +26,18 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     init();
 
     var checkRooms = function (roomMajors) {
-        console.log('checking rooms');
-        if (beaconPositions) {
-            if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        else {
-            return false;
-        }
+        return true;
+        // console.log('checking rooms');
+        // if (beaconPositions) {
+        //     if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
+        //         return true;
+        //     } else {
+        //         return false;
+        //     }
+        // }
+        // else {
+        //     return false;
+        // }
     }
 
     var requestRoomsWithMajor = function (roomMajors) { // [m1,m2,m3]
@@ -60,10 +62,56 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
     }
 
+    var beaconPosition =
+        {
+            major1: {
+                minor1: {
+                    x: 0,
+                    y: 0
+                },
+                minor14867: {
+                    x: 1,
+                    y: 0
+                },
+                minor6478: {
+                    x: 0,
+                    y: 1
+                },
+                minor62746: {
+                    x: 1,
+                    y: 1
+                }
+
+            }, major2: {
+                minor1: {
+                    x: 2,
+                    y: 2.4
+                },
+                minor14867: {
+                    x: 1,
+                    y: 1.22
+                },
+                minor6478: {
+                    x: 5,
+                    y: 1.45
+                },
+                minor62746: {
+                    x: 4,
+                    y: 8
+                }
+
+            }
+        }
+
+    var getBeaconPositions = function(){
+        return beaconPosition;
+        // return beaconPositions;
+    }
+
     return {
         init:init,
         checkRooms: checkRooms,
         requestARoomWithMajor: requestRoomsWithMajor,
-        beaconPositions: beaconPositions
+        getBeaconPositions: getBeaconPositions
     }
 })
