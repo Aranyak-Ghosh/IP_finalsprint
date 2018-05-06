@@ -20,6 +20,26 @@ let User = require('./user.js');
 let project_manager=require('./project_manager.js');
 
 
+
+function serveStaticFile (res, path , contentType , responseCode ) {
+    if (!responseCode) responseCode = 200 ;
+    fs.readFile (__dirname +'/public'+path, function (err,data) {
+    if (err)
+    {
+        res.writeHead ( 500 , { 'Content-Tye' : 'text/plain' });
+        res.end ( '500 - Internal Error' );
+    }
+    else
+    {
+        res.writeHead ( responseCode , { 'Content-Type' : contentType });
+        res.end (data);
+    }
+    });
+}
+
+
+
+
 app.set('port', process.env.PORT || 8080);
 
 /**
@@ -108,6 +128,8 @@ app.post('/attemptRegister', urlencodedParser, function (req, res) {
 });
 
 
+
+
 app.post('/room', urlencodedParser, function (req, res) {
 
     var beacon = req.body.id;
@@ -183,18 +205,18 @@ app.post('/room', urlencodedParser, function (req, res) {
 
     });
 });
-/*
+
 app.get('/listallprojects', function (req, res) {
     project_manager.retrieve_all(function(err,list){
         if(!err){
             res.status(200);
-            res.send(list);
+            res.send(JSON.stringify(list));
         }
         else
             res.sendStatus(500);
     });
 });
-*/
+
 
 app.post('/logout', urlencodedParser, function (req, res) {
 
@@ -219,7 +241,6 @@ app.post('/logout', urlencodedParser, function (req, res) {
         }
     });
 });
-
 
 
 ////////////////
