@@ -207,10 +207,12 @@ app.post('/room', urlencodedParser, function (req, res) {
 });
 
 app.get('/listallprojects', function (req, res) {
+    console.log('Received request to list all projects');
     project_manager.retrieve_all(function(err,list){
         if(!err){
             res.status(200);
-            res.send(JSON.stringify(list));
+            res.send(JSON.stringify({payload:list}));
+            console.log('Sent response');
         }
         else
             res.sendStatus(500);

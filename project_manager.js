@@ -83,7 +83,7 @@ module.exports.add_project = function (img) {
                                     projects:[]
                                 };
                                 doc._id = _id;
-                                img.route = dir+id;
+                                img.route = '/'+dir+id;
                                 doc.projects.push(img);
                                 couch.insert(projects, doc).then(({ data, headers, status }) => {
                                     logger.verbose('Document added for project');
