@@ -55,8 +55,8 @@ angular.module('angularApp', ['ionic', 'angularApp.controllers'])
         url: '/findProject',
         views: {
           'menuContent': {
-            templateUrl: 'templates/findProject.html',
-            controller:'FindAProjectController'
+            templateUrl: 'templates/findProject.html'
+            // controller:'FindAProjectController'
           }
         }
       })

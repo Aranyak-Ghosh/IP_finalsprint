@@ -31,9 +31,9 @@
           Landing
         </ion-item>
       </ion-list>
-      <p color="red" id="error">{{error}}</p>
       <div ng-show="!loggedIn">
         <h3 centered>Login</h3>
+      <p color="red" id="login-error">{{loginError}}</p>
       <label class="item item-input">
         <input type="text" id="username" placeholder="Username" ng-model="credentials.username"> {{$scope.username}}
       </label>

@@ -86,6 +86,8 @@
     </plugin>
     <plugin name="com.unarin.cordova.beacon" spec="https://github.com/dopry/cordova-plugin-ibeacon.git" />
     <plugin name="cordova-plugin-console" spec="^1.1.0" />
+    <allow-navigation href="http://10.25.157.20:8100" />
+    <allow-navigation href="http://169.254.151.115:8100" />
     <engine name="android" spec="7.0.0" />
     <engine name="ios" spec="4.5.4" />
 </widget>

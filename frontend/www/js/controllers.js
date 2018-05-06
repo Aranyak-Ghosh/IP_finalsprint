@@ -1,6 +1,7 @@
 angular.module('angularApp.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function (BeaconPositionsFactory, $rootScope, TriangulationLocationServicesFactory, UserService, $scope, $timeout, $ionicLoading) {
+  .controller('AppController', function ($rootScope, UserService, $scope, $timeout, $ionicLoading) {
+
 
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
@@ -15,14 +16,15 @@ angular.module('angularApp.controllers', [])
     $scope.credentials = {};
 
     // variables indicating currently logged in user information
-    $scope.loggedIn = UserService.loggedIn;
-    if ($scope.loggedIn)
-      $scope.username = null;
+    $scope.loggedIn = false;
+    $scope.username = null;
     $scope.loadingLogin = false;
     $scope.model = { position: 0 };
-
-
-
+    // var updateTimer = function(){
+    //   console.log('updating time')
+    //   $timeout(updateTimer, 5000);
+    // }
+    // updateTimer();
     // Broadcast listener to when user is finally Logged in
     $scope.$on('login-succeeded', function (event, args) {
       applyLogin(args.username);
@@ -30,7 +32,7 @@ angular.module('angularApp.controllers', [])
 
     // Broadcast listener to when log in fails
     $scope.$on('login-failed', function (event, args) {
-      failedLogin(args.message);
+      failedLogin();
     })
 
     // Broadcast listener to when user is logged out
@@ -39,8 +41,8 @@ angular.module('angularApp.controllers', [])
     })
 
     // Broadcast listener to whe user logout fails
-    $scope.$on('logout-failed', function (event, args) {
-      failedLogout(args.message);
+    $scope.$on('logout-failed', function (event) {
+      failedLogout();
     })
 
     // Action when logout succeeds
@@ -50,8 +52,8 @@ angular.module('angularApp.controllers', [])
     }
 
     // Action when logout fails
-    function failedLogout(message) {
-      $scope.error = 'Failed to log out: '+message;
+    function failedLogout() {
+      $scope.error = 'Failed to log out';
     }
 
     // listener to logout button press
@@ -80,9 +82,9 @@ angular.module('angularApp.controllers', [])
     }
 
     // responds to failed login
-    function failedLogin(message) {
+    function failedLogin(username) {
       // $scope.loadingLogin = false;
-      $scope.error = 'Login failed:'+ message;
+      $scope.error = 'Login failed';
       $scope.loggedIn = false;
     }
 
@@ -101,31 +103,37 @@ angular.module('angularApp.controllers', [])
 
   })
 
-  .controller('FindAProjectController', function($scope, ServerInterfaceService){
-    $scope.getProjects =function(){
-      ServerInterfaceService.requestProjects();
-    }
-  })
 
-  
-  .controller('LandingController', function ($scope, BeaconPositionsFactory) {
-
+  .controller('LandingController', function ($scope, $stateParams) {
   })
 
   // Controller of the explore page. This page will have all nearby beacon data available at all times as well as the maps and the 
-  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationBeaconsService) {
-    // $scope.rssi = { RSSI: TriangulationBeaconsService.rssi };
+  // Functionalities:
+  // - Draw room images on the map
+  // - Place projects on correct positions
+  // - Place user marker on correct position
+  // - allow user to click projects
+  // - fetch route to project and show it on screen
+  // - move user marker dynamically with user movements
+  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService) {
     console.log('explorer controller is on')
-    $scope.dists = { distances: TriangulationBeaconsService.distances };
-
-    $scope.beacons = { beacons: TriangulationBeaconsService.beacons };
-    $scope.position = { pos: TriangulationBeaconsService.position };
-    function logToDom(message) {
-      $scope.dom += message + '\n';
-    }
+    $scope.URL = 'http://10.25.156.58:8080';
+    ProjectsService.init();
+    ProjectsService.requestAllProjects();
+    $scope.projects = ProjectsService.returnProjectArray();
+    // $scope.$on('show-image', function(event, args){
+    //   var imageRoute = args.route;
+    //   $scope.image = window.localStorage.getItem(route);
+    // })
     var updateTimer = function () {
-      console.log($scope.position.pos);
+        // ProjectsService.requestAllProjects();
+        // $scope.projects.pReference.forEach((element)=>{
+        //   console.log(JSON.stringify(element));
+        // })
+        
+    $scope.projects = ProjectsService.returnProjectArray();
       $timeout(updateTimer, 5000);
     };
+
     updateTimer();
-  });
+});

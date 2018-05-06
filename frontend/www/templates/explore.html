@@ -2,10 +2,17 @@
   <ion-content>
     <h1>Explore</h1>
       <p>X:{{position.pos.pos.x}} Y:{{position.pos.pos.y}}</p>
-      <p>{{beacons.beacons.major1.minor1.distance}}</p>
-      <p>{{beacons.beacons.major1.minor62746.distance}}</p>
-      <p>{{beacons.beacons.major1.minor14867.distance}}</p>
-      <p>{{beacons.beacons.major1.minor6478.distance}}</p>
+      <p>Beacon1: {{beacons.beacons.major2.minor1.distance}}</p>
+      <p>Beacon2: {{beacons.beacons.major2.minor62746.distance}}</p>
+      <p>Beacon3: {{beacons.beacons.major2.minor14867.distance}}</p>
+      <p>Beacon4: {{beacons.beacons.major2.minor6478.distance}}</p>
+      <div class="list">
+        <a class="item item-avatar" ng-repeat="project in projects">
+          <img src="{{URL+project.route}}">
+          <h2>{{project.title}}</h2>
+          <h2>{{project.artist}}</h2>
+        </a>
+      </div>
     </button>
   </ion-content>
 </ion-view>
