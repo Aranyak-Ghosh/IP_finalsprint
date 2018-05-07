@@ -35,9 +35,9 @@ tar xvzf redis-stable.tar.gz
 cd redis-stable
 make
 ```
-2. To run redis, run the following command:
+2. To run redis, open directory where redis package is extracted and run the following command:
 ```
-redis-server
+./redis-server
 ```
 > To know more about redis follow https://redis.io/
 
