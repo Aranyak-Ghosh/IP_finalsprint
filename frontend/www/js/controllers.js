@@ -117,15 +117,25 @@ angular.module('angularApp.controllers', [])
   // - move user marker dynamically with user movements
   .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService) {
     console.log('explorer controller is on')
+    function log(message){
+      console.log('EXPLORE CONTROLLER: '+message);
+    }
     $scope.URL = 'http://10.25.156.58:8080';
     TriangulationService.init('b9407f30-f5f8-466e-aff9-25556b57fe6d');
     ProjectsService.init();
     ProjectsService.requestAllProjects();
+    $scope.position={x:0,y:0,radius:0};
     $scope.projects = ProjectsService.returnProjectArray();
     // $scope.$on('show-image', function(event, args){
     //   var imageRoute = args.route;
     //   $scope.image = window.localStorage.getItem(route);
     // })
+    $scope.$on('calculated-new-position', function(event, args){
+      log('recieved \'calculated-new-position\' broadcast');
+      $scope.position.x = args.center.x;
+      $scope.position.y = args.center.y;
+      $scope.position.radius = args.radius;
+    })
     var updateTimer = function () {
         // ProjectsService.requestAllProjects();
         // $scope.projects.pReference.forEach((element)=>{
