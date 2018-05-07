@@ -1,0 +1,29 @@
+<ion-view view-title="Search">
+  <ion-content>
+    <h1>Explore</h1>
+    <div ng-controller="CanvasCtrl">
+      <canvas  id="canvas" style="border: 1px gray solid; float: left">
+
+      </canvas>
+      <div id="list">
+        Points:
+        <ul>
+          <li ng-repeat="point in data">
+            [{{point.x}}, {{point.y}}]
+            <a ng-click="removePoint(point)">[x]</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p>Center: x={{position.x}} y={{position.y}}</p><br>
+      <p>Radius= {{position.radius}}</p>
+      <div class="list">
+        <a class="item item-avatar" ng-repeat="project in projects" ng-click="routeUser(project.title)">
+          <img src="{{URL+project.route}}">
+          <h2>{{project.title}}</h2>
+          <h2>{{project.artist}}</h2>
+        </a>
+      </div>
+    </button>
+  </ion-content>
+</ion-view>
