@@ -26,10 +26,13 @@ Before running the server code, make sure there is a redis server running on the
 Go to project directory
 Install required dependencies using the following command
 
-```npm init```
+```npm install```
 
-Run the server code.
+Ensure that an instance of redis server is already running on the server machine. 
+To know more about redis follow https://redis.io/
 
+After initializing the redis server instance, first run the database_client.js file using ```node database_client.js```
+After running the database client run the server.js file using ```node server.js```
 
 ## Contributing
 
