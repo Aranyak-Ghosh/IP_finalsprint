@@ -8,7 +8,7 @@ const nano = require('nano')('http://localhost:5984');
 const redis = require('redis');
 
 const logger = require('./logger.js');
-
+const fs=require('fs');
 
 const room_list = 'room-list';
 
@@ -45,8 +45,6 @@ mqtt_client.on('connect', function () {
 
 mqtt_client.on('message', function (topic, m_buff) {
 
-    logger.debug(m_buff.toString());
-
     var message = m_buff.toString();
 
     if (topic === topics.presence) {
@@ -54,28 +52,36 @@ mqtt_client.on('message', function (topic, m_buff) {
             m = JSON.parse(message);
 
             logger.verbose('Rpi discovered');
-            if (m.data == 'config') {
-                console.log('RPi discovered');
+            if (m.data === 'config') {
+
                 topics.rooms.push('COE457/Wayfinding/' + m.room);
                 mqtt_client.subscribe(topics.rooms[topics.rooms.length - 1]);
 
+                console.log('Subscribed to: '+topics.rooms[topics.rooms.length - 1]);
 
 
                 logger.verbose('Subscribed to room' + m.room);
 
                 var temp = {
                     beacons: m.beacons,
-                    size: m.size
+                    size: m.size,
+                    position:m.origin
                 };
 
-                var dir = __dirname + 'public/img/maps/' + m.room + '/';
+                redis_client.set(m.uuid,'/public/img/maps/' + m.room);
 
+                var dir = __dirname + '/public/img/maps/';
+                
+                var map=m.map;
+                
                 fs.mkdir(dir, function (err) {
                     if (err && err.code != 'EEXIST') {
-                        logger.error(err);
+                        logger.error(JSON.stringify(err));
                     }
                     else {
-                        fs.writeFile(dir + img.title, img.image, { encoding: 'base64' }, function (err) {
+                        
+                       
+                        fs.writeFile(dir + m.room, map, { encoding: 'base64' }, function (err) {
                             if (!err) {
                                 logger.verbose('Room map added');
                             }
@@ -84,6 +90,7 @@ mqtt_client.on('message', function (topic, m_buff) {
                         });
                     }
                 });
+
                 rooms.push(temp);
 
                 db.view('get_room', 'rooms', { 'keys': [m.room] }, function (err, body) {
@@ -91,8 +98,8 @@ mqtt_client.on('message', function (topic, m_buff) {
                         logger.error(err);
                     }
                     else {
-                        console.log('View running');
-                        console.log(JSON.stringify(body));
+                        
+                        
                         if (body.total_rows != body.offset) {
                             db.destroy(body.rows[0].value._id, body.rows[0].value._rev, function (err, body) {
                                 if (err)
@@ -123,22 +130,19 @@ mqtt_client.on('message', function (topic, m_buff) {
 
                 redis_client.set(topics.rooms[topics.rooms.length - 1], JSON.stringify(temp));
             }
-            else if (m.data == 'config') {
-                var look_up;
+            else if (m.data == 'ids') {
+                var look_up={};
+                
                 for (var key in m) {
+                    
                     if (!((key == 'data') || (key == 'room'))) {
-                        redis_client.set(m[key], JSON.stringify({ room: m.room, tag: key }), (err, reply) => {
-                            if (err)
-                                logger.error(err);
-                            else {
-                                console.log('Added data to redis');
-                                logger.verbose('Added data to redis');
-                            }
-                        });
                         look_up[key] = m[key];
+                        
+                       
                     }
                 }
-                console.log(m.room + ': ' + JSON.stringify(look_up));
+                
+             
                 redis_client.set(m.room, JSON.stringify(look_up), function (err, msg) {
                     if (err) {
                         logger.error(err);
@@ -174,7 +178,7 @@ mqtt_client.on('message', function (topic, m_buff) {
     else {
         var room_data = JSON.parse(message);
         console.log('Message received');
-        logger.debug(JSON.stringify(room_data));
+    
         console.log(message);
 
         db.view('get_room', 'rooms', { 'keys': [room_data.number] }, function (err, body) {
@@ -182,9 +186,6 @@ mqtt_client.on('message', function (topic, m_buff) {
                 logger.error(err);
             else {
 
-                console.log(JSON.stringify(body));
-
-                logger.debug(JSON.stringify(body));
                 var data = body.rows[0].value;
 
                 delete room_data.number;

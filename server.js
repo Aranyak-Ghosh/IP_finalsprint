@@ -11,9 +11,12 @@ const COOKIE = "chipsAhoy";
 
 const redis = require('redis');
 
+const logger = require('./logger.js');
 const redis_client = redis.createClient();
 
 const redis_config_key = 'COE457/Wayfinding/';
+
+
 const couch = new NodeCouchDb();
 
 let User = require('./user.js');
@@ -36,9 +39,6 @@ function serveStaticFile (res, path , contentType , responseCode ) {
     }
     });
 }
-
-
-
 
 app.set('port', process.env.PORT || 8080);
 
@@ -127,84 +127,46 @@ app.post('/attemptRegister', urlencodedParser, function (req, res) {
     });
 });
 
+app.post('/get_map',urlencodedParser, function(req,res){
+    var uuid=req.body.uuid;
 
-
-
-app.post('/room', urlencodedParser, function (req, res) {
-
-    var beacon = req.body.id;
-
-    //reply should be the room number
-    redis_client.get(beacon, (err, reply) => {
-
-        if (err) {
-
+    redis_client.get(uuid, function(err,reply){
+        if(err)
+        {
             logger.error('Redis error: ' + err);
 
             res.type('text/plain');
             res.status(500);
             res.send('500 - Internal Error');
         }
-        else {
-            //Send map, beacon location, 
-            var room_number = JSON.parse(reply).room;
-            redis_client.get(room_number, (err, reply) => {
-                if (err) {
-
-                    logger.error('Redis error: ' + err);
-
-                    res.type('text/plain');
-                    res.status(500);
-                    res.send('500 - Internal Error');
-                }
-                else {
-                    var look_up = JSON.parse(reply);
-                    redis_client.get(redis_config_key + room_number, (err, reply) => {
-                        if (err) {
-
-                            logger.error('Redis error: ' + err);
-
-                            res.type('text/plain');
-                            res.status(500);
-                            res.send('500 - Internal Error');
-                        }
-                        else {
-                            var map = JSON.parse(reply).map;
-                            var beacons = JSON.parse(reply).beacons;
-
-                            var re_json = {
-                                map: map,
-                                beacons: []
-                            };
-
-                            for (var x in beacons) {
-                                re_json.beacons.push({
-                                    id: look_up[x],
-                                    position: beacons[x]
-                                });
-                            }
-
-                            beacons.forEach(element => {
-                                var temp;
-
-                                temp.id = look_up[element.id];
-                                temp.position = element.position;
-
-                                re_json.beacons.push(temp);
-                            });
-
-                            res.status(200);
-                            res.set('Content-Type', 'text/plain');
-                            res.send(JSON.stringify(re_json));
-
-                        }
-                    });
-                }
-            });
+        else{
+            res.send(reply);
+            logger.verbose('Sent map route');
         }
-
     });
 });
+
+app.post('/get-room', urlencodedParser, function(req, res){
+
+    var room=req.body.major;
+
+    redis_client.get(redis_config_key+room, function(err, reply){
+        if(err)
+        {
+            logger.error('Redis error: ' + err);
+
+            res.type('text/plain');
+            res.status(500);
+            res.send('500 - Internal Error');
+        }
+        else{
+            var config=JSON.parse(reply);
+            res.send(reply);
+            logger.verbose('Sent beacon positions');
+        }
+    });
+});
+
 
 app.get('/listallprojects', function (req, res) {
     console.log('Received request to list all projects');
