@@ -1,4 +1,3 @@
-
 const express = require('express');
 const app = express();
 const fs = require('fs');
@@ -7,14 +6,39 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const NodeCouchDb = require('node-couchdb');
-const FileStore = require('session-file-store')(session);
 const uuid = require('uuid/v4');
 const COOKIE = "chipsAhoy";
+
+const redis = require('redis');
+
+const logger = require('./logger.js');
+const redis_client = redis.createClient();
+
+const redis_config_key = 'COE457/Wayfinding/';
 
 
 const couch = new NodeCouchDb();
 
 let User = require('./user.js');
+let project_manager=require('./project_manager.js');
+
+
+
+function serveStaticFile (res, path , contentType , responseCode ) {
+    if (!responseCode) responseCode = 200 ;
+    fs.readFile (__dirname +'/public'+path, function (err,data) {
+    if (err)
+    {
+        res.writeHead ( 500 , { 'Content-Tye' : 'text/plain' });
+        res.end ( '500 - Internal Error' );
+    }
+    else
+    {
+        res.writeHead ( responseCode , { 'Content-Type' : contentType });
+        res.end (data);
+    }
+    });
+}
 
 app.set('port', process.env.PORT || 8080);
 
@@ -33,59 +57,26 @@ app.use(cookieParser());
  */
 app.use(session({
     genid: (req) => {
-        return uuid() // use UUIDs for session IDs
+        return uuid(); // use UUIDs for session IDs
     },
     secret: COOKIE,
-    store: new RedisStore({host:'localhost',port:6379}),
+    store: new RedisStore({ host: 'localhost', port: 6379 }),
     cookie: { maxAge: 60000 },
     resave: false,
     saveUninitialized: true
 }));
 
+app.use(bodyParser.json());
+
 
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
-
-/**
- * Default Directory.
- * Login page if not signed in 
- * Homepage if signed in
- */
-app.get('/', function (req, res) {
-    res.set('Content-Type', 'text/html');
-    var sess = req.session;
-
-    if (sess.username)
-        fs.readFile('public/homepage.html', function (err, data) {
-            if (err) throw err;
-            else {
-                res.send(data);
-            }
-        })
-    else fs.readFile('login.html', function (err, data) {
-        if (err) throw err;
-        else {
-            res.send(data);
-        }
-    })
-});
-
-/**
- * Send signup page on request
- */
-app.get('/signup', function (req, res) {
-    res.set('Content-Type', 'text/html');
-    fs.readFile('public/signup.html', function (err, data) {
-        if (err) throw err;
-        else {
-            res.send(data);
-        }
-    })
-});
 
 /**
  * Serve login attempt as a POST request. Redirect to homepage if authenticated
  */
 app.post('/attemptLogin', urlencodedParser, function (req, res) {
+
+    console.log(JSON.stringify(req.body));
     if (req.body.username.includes("@"))
         var user = new User("null", req.body.password, req.body.username);
     else
@@ -97,21 +88,21 @@ app.post('/attemptLogin', urlencodedParser, function (req, res) {
 
     res.set('Content-Type', 'text/plain');
     user.authenticate().then((code) => {
-        req.session.username = code;
+        res.send(code);
         res.status(200);
-        res.send('true');
+        redis_client.set(code, user.username);
     }).catch((error) => {
-       
-            if (!error.includes('500')) {
-                res.status(200);
-                res.send(error);
-            }
-            else {
-                res.status(500);
-                res.send(error);
-            }
-        
-        
+
+        if (!error.includes('500')) {
+            res.status(200);
+            res.send(error);
+        }
+        else {
+            res.status(500);
+            res.send(error);
+        }
+
+
     })
 });
 
@@ -136,134 +127,86 @@ app.post('/attemptRegister', urlencodedParser, function (req, res) {
     });
 });
 
-/**
- * Serve Search requests
- */
-app.get('/searchLocationString', function (req, res) {
-    var query = req.query;
-    // search for place in database
-    // retrieve array of LatLng values
-    var beacons = {
-        beacons: [
-            {
-                lat: 37.721325,
-                lng: -122.479749
-            },
-            {
-                lat: 37.721516,
-                lng: -122.479545
-            },
-            {
-                lat: 37.7214285,
-                lng: -122.479691
-            },
-            {
-                lat: 37.721400,
-                lng: -122.479569
+app.post('/get_map',urlencodedParser, function(req,res){
+    var uuid=req.body.uuid;
+
+    redis_client.get(uuid, function(err,reply){
+        if(err)
+        {
+            logger.error('Redis error: ' + err);
+
+            res.type('text/plain');
+            res.status(500);
+            res.send('500 - Internal Error');
+        }
+        else{
+            res.send(reply);
+            logger.verbose('Sent map route');
+        }
+    });
+});
+
+app.post('/get-room', urlencodedParser, function(req, res){
+
+    var room=req.body.major;
+
+    redis_client.get(redis_config_key+room, function(err, reply){
+        if(err)
+        {
+            logger.error('Redis error: ' + err);
+
+            res.type('text/plain');
+            res.status(500);
+            res.send('500 - Internal Error');
+        }
+        else{
+            var config=JSON.parse(reply);
+            res.send(reply);
+            logger.verbose('Sent beacon positions');
+        }
+    });
+});
+
+
+app.get('/listallprojects', function (req, res) {
+    console.log('Received request to list all projects');
+    project_manager.retrieve_all(function(err,list){
+        if(!err){
+            res.status(200);
+            res.send(JSON.stringify({payload:list}));
+            console.log('Sent response');
+        }
+        else
+            res.sendStatus(500);
+    });
+});
+
+
+app.post('/logout', urlencodedParser, function (req, res) {
+
+    redis_client.del(req.body.token, function (err, reply) {
+        if (!err) {
+            console.log('Redis replied: ' + reply);
+
+            if (reply == 1) {
+                res.status(200);
+                res.send('logged out');
             }
-        ]
-    }
-    console.log(JSON.stringify(beacons));
-    res.end(JSON.stringify(beacons));
-})
+            else {
+                res.status(200);
+                res.send('Already logged out');
 
-/////////////////
-
-// testing beacon status
-app.get('/beaconInfo', function(req, res){
-    console.log("GET request to route /beaconInfo")
-    var data = [{
-        temp:32,
-        light:22
-    },{
-        temp:32,
-        light:22
-    },{
-        temp:32,
-        light:22
-    },{
-        temp:32,
-        light:22
-    }]
-    res.status(200);
-    res.send(data);
-    res.end();
-    console.log("Recieved a request for beacon information of beacon 0");
-})
+            }
+        }
+        else {
+            res.status(500);
+            res.send('Internal server error');
+            console.log('Redis server error: ' + err);
+        }
+    });
+});
 
 
-/////////////////
-
-//route one find_project', {projectID: string, location{ x: int,y:int}})
-
-
-app.post ('/find_project',urlencodedParser, function(req, res){
-
-   var userlocation = req.body.userlocation;
-   var projectlocation= req.body.projectID;
- 
-   var beacons ={
-       beacons:[
-{
-    lat:37.721325,
-    lng:-122.479749
-},
-
-{
-    lat:37.721325,
-    lng:-122.479749
-},
-{
-    lat:37.721325,
-    lng:-122.479749
-}, 
-
-] }
-
-   console.log(JSON.stringify(beacons));
-   res.end(JSON.stringify(beacons));
-})
-//////////////////
-
-//route two finding new routes for the user incase lost 
-
-app.post ('/reroute',urlencodedParser, function(req,res){
-
-var usercurrentlocation = req.body.newlocation;
-var newroute = req.body.new_route;
-var beacons ={
-    beacons:[
-
-{
- lat:37.721325,
- lng:-122.479749
-},
-{
- lat:37.721325,
- lng:-122.479749
-},
-{
- lat:37.721325,
- lng:-122.479749
-}, 
-]
-}
-
-console.log(JSON.stringify(beacons));
-res.end(JSON.stringify(beacons));
-})
-
-////////////////
-
-//getting the list of projects 
-
-app.get('/projectlist',urlencodedParser,function(req, res){
-
-     var lists = req.body.project_list;
-
-
-
-})
 ////////////////
 // custom 404 page
 app.use(function (req, res) {
@@ -287,6 +230,5 @@ app.listen(app.get('port'), function () {
 });
 
 
-/////////////////
 
 

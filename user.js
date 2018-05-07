@@ -9,7 +9,7 @@ const couch = new NodeCouchDb();
 const u_db = 'user-info';
 const u_cookie = 'cookie';
 
-const salt_rounds=10;
+const salt_rounds = 10;
 
 /**
 *Class name: User
@@ -40,15 +40,6 @@ module.exports = class User {
     }
 
     /**
-     * Creates a unique id for user to be stored in database when registered
-     */
-    generateid() {
-        var ids;
-        couch.uniqid().then(ids => ids[0]);
-        this.id = ids;
-    }
-
-    /**
      * Function to register a user with given credentials
      * @returns {Promise} res A promise object which returns 'User Registered' if adding user to database was successful and an error message if user with given credentials already exists
      */
@@ -58,6 +49,14 @@ module.exports = class User {
             var status = 'User registered';
             var err = null;
 
+            var cred = {
+                email: this.email,
+                password: this.password,
+                username: this.username
+            };
+
+
+
             check_user_exist(this.email, this.username).then(function (result) {
                 if (result.data) {
                     if (result.op == 1)
@@ -66,13 +65,18 @@ module.exports = class User {
                         reject('User with given Username already exists');
                 }
                 else {
-                    bcrypt.hash(password,salt_rounds, function(err,hash){
-                        if(!err){
+                    console.log(cred.username);
+                    console.log(cred.password);
+                    console.log(cred.email);
+                    bcrypt.hash(cred.password, salt_rounds, function (err, hash) {
+                        if (!err) {
+                            var temp = { id: 'some id' };
+                            generateid(temp);
                             couch.insert('user-info', {
-                                _id: this.generateid(),
-                                username: this.username,
-                                password: this.password,
-                                email: this.email
+                                _id: temp.id,
+                                username: cred.username,
+                                password: hash,
+                                email: cred.email
                             }).then(({ data, header, status }) => {
                                 console.log(data);
                                 console.log(header);
@@ -86,7 +90,7 @@ module.exports = class User {
                         else
                             reject(err);
                     });
-                    
+
                 }
             }).catch(function (error) {
                 console.log(error);
@@ -101,27 +105,38 @@ module.exports = class User {
      * @returns {Promise} res Returns a promise object which gives the username of the user if authenticated and a suitable error message if the user is not registered or if the passwords do
      */
     authenticate() {
-        
+
         return new Promise((resolve, reject) => {
             var status = 'User Authenticated';
             var err = null;
-            var pass=this.password;
-            
-            check_user_exist(this.email, this.username).then( (result) =>{
+            var pass = this.password;
+
+            check_user_exist(this.email, this.username).then((result) => {
                 if (result.data === null)
                     reject('User with given username/email does not exist');
-                else{
-                    bcrypt.compare(pass,result.data.password,function(err,res){
-                        if(!err){
-                            if(res==true)
-                                resolve(result.data.username);
+                else {
+                    bcrypt.compare(pass, result.data.password, function (err, res) {
+                        if (!err) {
+                            if (res == true) {
+
+                                bcrypt.hash(result.data.username, salt_rounds, function (err, hash) {
+                                    if (!err)
+                                        resolve(hash);
+                                    else {
+                                        console.log(err);
+                                        reject(err);
+                                    }
+                                });
+
+                            }
+
                             else
                                 reject('Incorrect Password');
                         }
                         else
                             reject(err);
                     });
-                } 
+                }
             }).catch(function (err) {
                 reject('Internal Error - 500');
             });
@@ -182,5 +197,13 @@ function check_user_exist(email, username) {
 
 }
 
+/**
+    * Creates a unique id for user to be stored in database when registered
+*/
+function generateid(x) {
+    var ids;
+    couch.uniqid().then(ids => ids[0]);
+    x.id = ids;
+}
 
 

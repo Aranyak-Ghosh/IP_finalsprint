@@ -8,67 +8,109 @@ const logger = require('./logger.js');
 
 const broker = 'mqtt://broker.mqttdashboard.com';
 
-const room_number = 1;
-const beacons = [{ id: 'A', positon: '(0,0)' }, { id: 'B', positon: '(0,15)' }, { id: 'C', positon: '(15,0)' }, { id: 'D', positon: '(15,15)' }];
+
+/**
+ * CONSTANTS for the room
+ */
+const room_number = 2;
+const beacons = [
+    { minor: '1', positon: { x: 0, y: 0 } },
+    { minor: '2', positon: { x: 10, y: 15 } },
+    { minor: '3', positon: { x: 10, y: 0 } },
+];
+
 const size = '10x15';
 
+/**
+ * Publishing frequency in ms
+ */
+const freq_ms = 30000;
 
+/**
+ * JSON object for converting beacon ids to tags (A/B/C/D)
+ */
 const short_to_id = {
-    'A': 'bf21a232f6e4a3d1',
-    'B': '4e091543338907a8',
-    'C': 'c3b74ba25c022e0b',
-    'D': '4cb9e22acfdc501e'
+    room: room_number,
+    data: 'ids',
+    A: 'bf21a232f6e4a3d1',
+    B: '4e091543338907a8',
+    C: 'c3b74ba25c022e0b'
 };
 
 const topics = {
     presence: 'COE457/Wayfinding/presence',
-    rooms: 'COE457/Wayfinding/1',
+    rooms: 'COE457/Wayfinding/2',
     last_will: 'COE457/Wayfinding/last_will'
 };
-var mqtt_client = mqtt.connect(broker, { will: { topic: topics.last_will, payload: room_number } });
 
-
+var mqtt_client = mqtt.connect(broker);
 
 var data;
 
+const region_uuid='B9407F30-F5F8-466E-AFF9-25556B57FE6D';
+
+/**
+ * function to convert image files to base_64 encoded strings
+ */
 function base64_encode(file) {
     logger.verbose('Converting ' + file + ' to Base64');
     return fs.readFileSync(file, 'base64');
 }
 
+/**
+ * Basic configuration data for the room
+ * attributes: room-> identifier for each room
+ *             data-> identifier for the message to distinguish between messages
+ *             map-> base64 encoded string of room map
+ *             size-> size of the room to set up our coordinate system for the room (in this case the room is assumed to be 10mx15m)
+ *             beacons-> position of the beacons in the room based on the coordinate system set up from the size
+ */
 data = {
-    number: room_number,
+    room: room_number,
+    data: 'config',
     map: base64_encode('/home/aghosh/Desktop/IP_part3/Rpi/public/img/Room1.jpg'),
     size: size,
+    origin:{
+        x:0,
+        y:0
+    },
+    uuid:region_uuid,
     beacons: beacons
 };
 
+/**
+ * JSON object which gets updated by beacon data
+ * 
+ */
 var beacon_data = {
-    number: 1,
+    number: room_number,
     A: null,
     B: null,
-    C: null,
-    D: null
+    C: null
 };
+
 
 mqtt_client.on('connect', function () {
     logger.verbose('Connected to broker');
     mqtt_client.publish(topics.presence, JSON.stringify(data));
+    mqtt_client.publish(topics.presence, JSON.stringify(short_to_id));
 });
 
+
 function publish_data() {
-    logger.info('Publishing data to broker');
+    logger.verbose('Publishing data to broker');
+    console.log('Publishing to broker');
     if (beacon_data.A) {
 
         beacon_data.avg = {
-            ambientLightLevel: ((beacon_data.A.ambientLightLevel + beacon_data.B.ambientLightLevel + beacon_data.C.ambientLightLevel + beacon_data.D.ambientLightLevel) / 4.0),
-            temperature: ((beacon_data.A.temperature + beacon_data.B.temperature + beacon_data.C.temperature + beacon_data.D.temperature) / 4.0)
+            ambientLightLevel: ((beacon_data.A.ambientLightLevel + beacon_data.B.ambientLightLevel + beacon_data.C.ambientLightLevel ) / 3.0),
+            temperature: ((beacon_data.A.temperature + beacon_data.B.temperature + beacon_data.C.temperature ) / 3.0)
         };
         mqtt_client.publish(topics.rooms, JSON.stringify(beacon_data));
     }
 }
 
-setInterval(publish_data, 300000);
+setInterval(publish_data, freq_ms);
 
 // Packest from the Estimote family (Telemetry, Connectivity, etc.) are
 // broadcast as Service Data (per "§ 1.11. The Service Data - 16 bit UUID" from
