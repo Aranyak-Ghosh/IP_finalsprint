@@ -8,7 +8,7 @@
 
 // Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
 
-angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, ServerInterfaceService) {
+angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, RoomService) {
     // storage references
     var storage = window.localStorage;
     var universal_uuid;
@@ -16,8 +16,7 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     // beacon positions
     var beaconPositions = {}; // beaconPositions = {}
 
-    function init(uuid) 
-    {   
+    function init(uuid) {
         universal_uuid = uuid;
         var storedPositions = storage.getItem(beaconPositionKey);
         if (storedPositions) beaconPositions = JSON.parse(storedPositions);
@@ -44,17 +43,17 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         console.log('requesting rooms')
         for (var i = 0; i < roomMajors.length; i++) {
             if (!beaconPositions['major' + roomMajors[i]]) {
-                ServerInterfaceService.requestARoomWithMajor(universal_uuid, roomMajors[i]);
+                RoomService.requestARoom(universal_uuid, roomMajors[i]);
             }
         }
     }
 
-    $rootScope.$on('received-a-room', function (event, args) {
+    $rootScope.$on('add-new-positions', function (event, args) {
         beaconPositions['major' + args.major] = {};
-        for (var i = 0; i < args.minors.length; i++) {
-            beaconPositions['major' + args.major]['minor' + args.minors[i].number] = args.minors[i].position;
+        args.positions.forEach(element => {
+            beaconPositions['major' + args.major]['minor' + element.number] = element.position;
             updateLocalStorage();
-        }
+        })
     })
 
     function updateLocalStorage() {
@@ -103,13 +102,13 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
             }
         }
 
-    var getBeaconPositions = function(){
+    var getBeaconPositions = function () {
         return beaconPosition;
         // return beaconPositions;
     }
 
     return {
-        init:init,
+        init: init,
         checkRooms: checkRooms,
         requestARoomWithMajor: requestRoomsWithMajor,
         getBeaconPositions: getBeaconPositions

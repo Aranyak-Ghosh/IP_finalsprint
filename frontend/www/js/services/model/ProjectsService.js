@@ -61,23 +61,23 @@ angular.module('angularApp').factory('ProjectsService', function ($rootScope, Se
         fetchProjectsFromStorage();
     }
 
-    // should become an ID
-    var requestOneProjectImage = function (title) {
-        log('Attempting to fetch image of project' + title);
-        if (projects.length > 0) {
-            projects.forEach((element) => {
-                if (element.title === title) {
-                    log('Project ' + title + ' loaded. requesting image ...');
-                    ServerInterfaceService.requestOneProjectImage(element.route);
-                    return;
-                }
-            })
-            log('Could not find project ' + title + ' in storage')
-        }
-        else {
-            log('Project: ' + title + ' is not store');
-        }
-    }
+    // // should become an ID
+    // var requestOneProjectImage = function (title) {
+    //     log('Attempting to fetch image of project' + title);
+    //     if (projects.length > 0) {
+    //         projects.forEach((element) => {
+    //             if (element.title === title) {
+    //                 log('Project ' + title + ' loaded. requesting image ...');
+    //                 ServerInterfaceService.requestOneProjectImage(element.route);
+    //                 return;
+    //             }
+    //         })
+    //         log('Could not find project ' + title + ' in storage')
+    //     }
+    //     else {
+    //         log('Project: ' + title + ' is not store');
+    //     }
+    // }
 
     var requestAllProjects = function () {
         log('requesting all projects from server');
