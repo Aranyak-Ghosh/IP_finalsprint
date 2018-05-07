@@ -6,7 +6,7 @@
 // Exposes: beacons: a JSON reference to all nearby beacons
 //          position: x, y of the user relative to the system's grid
 
-// Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
+// Listens: 'add-new-positions': expects the beacon positions of every beacon in a room 
 
 angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, RoomService) {
     // storage references
@@ -15,6 +15,9 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     var beaconPositionKey = "beaconPositions"
     // beacon positions
     var beaconPositions = {}; // beaconPositions = {}
+    function log(message){
+        console.log('BEACON POSITION: '+message)
+    }
 
     function init(uuid) {
         universal_uuid = uuid;
@@ -22,25 +25,23 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         if (storedPositions) beaconPositions = JSON.parse(storedPositions);
     }
 
-    init();
-
     var checkRooms = function (roomMajors) {
-        return true;
-        // console.log('checking rooms');
-        // if (beaconPositions) {
-        //     if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
-        //         return true;
-        //     } else {
-        //         return false;
-        //     }
-        // }
-        // else {
-        //     return false;
-        // }
+        // return true;
+        console.log('checking rooms');
+        if (beaconPositions) {
+            if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
     }
 
     var requestRoomsWithMajor = function (roomMajors) { // [m1,m2,m3]
-        console.log('requesting rooms')
+        log('requesting rooms with majors'+JSON.stringify(roomMajors));
         for (var i = 0; i < roomMajors.length; i++) {
             if (!beaconPositions['major' + roomMajors[i]]) {
                 RoomService.requestARoom(universal_uuid, roomMajors[i]);
@@ -49,15 +50,17 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     }
 
     $rootScope.$on('add-new-positions', function (event, args) {
+        log('Added room with major: '+args.major);
         beaconPositions['major' + args.major] = {};
-        args.positions.forEach(element => {
-            beaconPositions['major' + args.major]['minor' + element.number] = element.position;
-            updateLocalStorage();
+        args.beacons.forEach(element => {
+            beaconPositions['major' + args.major]['minor' + element.minor] = element.position;
         })
+        updateLocalStorage();
     })
 
     function updateLocalStorage() {
-        console.log('updating localStorage');
+        log('updating localStorage');
+        log(JSON.stringify(beaconPositions))
         storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
     }
 
@@ -110,7 +113,7 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     return {
         init: init,
         checkRooms: checkRooms,
-        requestARoomWithMajor: requestRoomsWithMajor,
+        requestRoomsWithMajor: requestRoomsWithMajor,
         getBeaconPositions: getBeaconPositions
     }
 })

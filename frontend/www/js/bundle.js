@@ -281,13 +281,8 @@ require('./services/triangulation/TriangulationService');
 require('./services/model/ProjectsService.js');
 require('./services/model/RoomService.js');
 require('./services/model/UserService.js');
-require('./services/NavigationService.js');
 require('./services/ServerInterfaceService.js');
-},{"./services/NavigationService.js":5,"./services/ServerInterfaceService.js":6,"./services/model/ProjectsService.js":7,"./services/model/RoomService.js":8,"./services/model/UserService.js":9,"./services/triangulation/BeaconPositionsFactory.js":10,"./services/triangulation/CenterlizationService":11,"./services/triangulation/RealtimeBeaconDistancesService":12,"./services/triangulation/TriangulationService":13}],5:[function(require,module,exports){
-angular.module('angularApp').service('NavigationService', function () {
-
-})
-},{}],6:[function(require,module,exports){
+},{"./services/ServerInterfaceService.js":5,"./services/model/ProjectsService.js":6,"./services/model/RoomService.js":7,"./services/model/UserService.js":8,"./services/triangulation/BeaconPositionsFactory.js":9,"./services/triangulation/CenterlizationService":10,"./services/triangulation/RealtimeBeaconDistancesService":11,"./services/triangulation/TriangulationService":12}],5:[function(require,module,exports){
 angular.module('angularApp')
     /*
     * Application to server interface
@@ -386,25 +381,6 @@ angular.module('angularApp')
                 })
         }
 
-        // caching image - won't do it
-        
-        // // request a project's image and store the file in storage based on the key
-        // this.requestOneProjectImage = function(route){
-        //     var options = {
-        //         method: 'GET',
-        //         url: URL + route,
-        //     }
-        //     $http(options).then(function(response){
-        //         log('recieved the image from route '+route);
-        //         window.localStorage.setItem(route, response.data);
-        //         $rootScope.$broadcast('saved-image', {route: route});
-        //         //log(data.data);
-        //     })
-        //     .catch(function(error){
-        //         log('Could not fetch image from route: '+route+' error: '+ JSON.stringify(error));
-        //     })
-        // }
-
         /*
         * returns a list of all projects or null if there's an error
         */
@@ -475,19 +451,23 @@ angular.module('angularApp')
         this.requestARoomWithMajor = function (uuid, major) {
             var options = {
                 method: 'POST',
-                url: URL + '/requestARoom',
-                data: { uuid: uuid, major: major }
+                url: URL + '/get-room',
+                data: { /*uuid: uuid,*/ major: major }
             }
             $http(options).then(function (res) {
                 console.log('Server requested room major: ' + major)
                 var response = {
                     major: major,
-                    minors: []
+                    beacons: [],
+                    size:res.data.size
+                    // position:{
+                    //     x:res.position.x,
+                    //     y:res.position.y
+                    // }
                 };
-                for (var i = 0; i < res.minors.length; i++) {
-                    response.minors.push(res.minors[i]);
+                for (var i = 0; i < res.data.beacons.length; i++) {
+                    response.beacons.push(res.data.beacons[i]);
                 }
-
                 $rootScope.$broadcast('received-a-room', response);
             })
                 .catch(function (error) {
@@ -496,7 +476,7 @@ angular.module('angularApp')
         }
     })
 
-},{}],7:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // Will contain the paths of all the projects of this deployment
 angular.module('angularApp').factory('ProjectsService', function ($rootScope, ServerInterfaceService) {
     var projectsLog = 'PROJECTS SERVICE: ';
@@ -595,7 +575,7 @@ angular.module('angularApp').factory('ProjectsService', function ($rootScope, Se
 
 })
 
-},{}],8:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 
 angular.module('angularApp').factory('RoomService', function ($rootScope, ServerInterfaceService) {
     var roomsLog = 'ROOM SERVICE: ';
@@ -635,7 +615,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
     }
 
     var requestARoom = function (uuid, major) {
-        ServerInterfaceService.requestARoomWithMajor(universal_uuid, roomMajors[i]);
+        ServerInterfaceService.requestARoomWithMajor(uuid, major);
     }
 
     $rootScope.$on('received-rooms', function (event, args) {
@@ -645,7 +625,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
     
     $rootScope.$on('received-a-room', function(event, args){
         log('recieved one room with major: '+args.major)
-        $rootScope.$broadcast('add-new-positions', {major: args.major, positions:args.beacons})
+        $rootScope.$broadcast('add-new-positions', {major: args.major, beacons:args.beacons})
         addSingleRoom(args);
     })
 
@@ -681,83 +661,83 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
     }
 })
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Exposes: 
-    // loggedIn: boolean - Indicates whether user is logged in or not 
-    // initiateLogin(username, password): void - starts login process
-    // initiateLogout(): void - Initiates logout process
-    angular.module('angularApp').service('UserService', function ($rootScope, ServerInterfaceService) {
-        // This service keeps track of all user related info, including login status,
-        // encrypted token (for persistancy), and all the functions required
-          var storage = window.localStorage; // local storage reference
-          var tokenKey = 'TOKEN';
-          var userKey = 'USER';
-          var token = storage.getItem(tokenKey); // fetches token from local storage
-          var username = storage.getItem(userKey);
-          this.loggedIn = false;
-          if (token) // if the token exists in local memory, it will set the loggedIn to true
-              this.loggedIn = true;
-  
-  
-          /*
-          * Starts the log in process by sending a login request to the ServerInterface
-          */
-          this.initiateLogin = function (username, password) {
-              console.log('Attempting login with UN: ' + username + ' PW: ' + password);
-              // This will send the log in request to the ServerInterfaceService, which is an
-              // HTTP client that communicates with the cloud service
-              ServerInterfaceService.serverLogin(username, password);
-          }
-  
-          /*
-          * Starts the log out process by sending a logout request to the ServerInterface
-          */
-          this.initiateLogout = function () {
-              console.log('Attempting logout of UN: ' + username);
-              ServerInterfaceService.serverLogout(token);
-          }
-  
-          /*
-          * Broadcast listener to successful login from ServerInterface
-          */
-          $rootScope.$on('server-login-success', function (event, args) {
-              this.loggedIn = true;
-              token = args.token;
-              username = args.username;
-              storage.setItem(tokenKey, token);
-              storage.setItem(userKey, username);
-              // Sends a boradcast to the UI to inform it of succesful login
-              $rootScope.$broadcast('login-succeeded', { username: username });
-          })
-  
-          /*
-          * Broadcast listener to failed login from ServerInterface
-          */
-          $rootScope.$on('server-login-failed', function (event, args) {
-              $rootScope.$broadcast('login-failed', {message:args.message});
-          })
-  
-          /*
-          * Broadcast listener to successful logout from ServerInterface
-          */
-          $rootScope.$on('server-logout-succeeded', function (event) {
-              this.loggedIn = false;
-              token = null;
-              storage.removeItem(tokenKey);
-              $rootScope.$broadcast('logout-succeeded')
-              console.log('Logged out');
-          })
-  
-          /*
-          * Broadcast listener to failed logout from ServerInterface
-          */
-          $rootScope.$on('server-logout-failed', function (event, args) {
-              $rootScope.$broadcast('logout-failed', { message: args.message });
-          })
-  
-      })
-  
-},{}],10:[function(require,module,exports){
+// loggedIn: boolean - Indicates whether user is logged in or not 
+// initiateLogin(username, password): void - starts login process
+// initiateLogout(): void - Initiates logout process
+angular.module('angularApp').service('UserService', function ($rootScope, ServerInterfaceService) {
+    // This service keeps track of all user related info, including login status,
+    // encrypted token (for persistancy), and all the functions required
+    var storage = window.localStorage; // local storage reference
+    var tokenKey = 'TOKEN';
+    var userKey = 'USER';
+    var token = storage.getItem(tokenKey); // fetches token from local storage
+    this.username = storage.getItem(userKey);
+    this.loggedIn = false;
+    if (token) // if the token exists in local memory, it will set the loggedIn to true
+        this.loggedIn = true;
+
+
+    /*
+    * Starts the log in process by sending a login request to the ServerInterface
+    */
+    this.initiateLogin = function (username, password) {
+        console.log('Attempting login with UN: ' + username + ' PW: ' + password);
+        // This will send the log in request to the ServerInterfaceService, which is an
+        // HTTP client that communicates with the cloud service
+        ServerInterfaceService.serverLogin(username, password);
+    }
+
+    /*
+    * Starts the log out process by sending a logout request to the ServerInterface
+    */
+    this.initiateLogout = function () {
+        console.log('Attempting logout of UN: ' + username);
+        ServerInterfaceService.serverLogout(token);
+    }
+
+    /*
+    * Broadcast listener to successful login from ServerInterface
+    */
+    $rootScope.$on('server-login-success', function (event, args) {
+        this.loggedIn = true;
+        token = args.token;
+        this.username = args.username;
+        storage.setItem(tokenKey, token);
+        storage.setItem(userKey, username);
+        // Sends a boradcast to the UI to inform it of succesful login
+        $rootScope.$broadcast('login-succeeded', { username: username });
+    })
+
+    /*
+    * Broadcast listener to failed login from ServerInterface
+    */
+    $rootScope.$on('server-login-failed', function (event, args) {
+        $rootScope.$broadcast('login-failed', { message: args.message });
+    })
+
+    /*
+    * Broadcast listener to successful logout from ServerInterface
+    */
+    $rootScope.$on('server-logout-succeeded', function (event) {
+        this.loggedIn = false;
+        token = null;
+        storage.removeItem(tokenKey);
+        $rootScope.$broadcast('logout-succeeded')
+        console.log('Logged out');
+    })
+
+    /*
+    * Broadcast listener to failed logout from ServerInterface
+    */
+    $rootScope.$on('server-logout-failed', function (event, args) {
+        $rootScope.$broadcast('logout-failed', { message: args.message });
+    })
+
+})
+
+},{}],9:[function(require,module,exports){
 // this factory provides a bindable object of all stored beacon positions.
 // Calculating the distances from each beacon will take into account the proximity factor and RSSI.
 // After getting each beacon's distance and, having their absolute position, the absolute position
@@ -766,7 +746,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
 // Exposes: beacons: a JSON reference to all nearby beacons
 //          position: x, y of the user relative to the system's grid
 
-// Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
+// Listens: 'add-new-positions': expects the beacon positions of every beacon in a room 
 
 angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, RoomService) {
     // storage references
@@ -775,6 +755,9 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     var beaconPositionKey = "beaconPositions"
     // beacon positions
     var beaconPositions = {}; // beaconPositions = {}
+    function log(message){
+        console.log('BEACON POSITION: '+message)
+    }
 
     function init(uuid) {
         universal_uuid = uuid;
@@ -782,25 +765,23 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         if (storedPositions) beaconPositions = JSON.parse(storedPositions);
     }
 
-    init();
-
     var checkRooms = function (roomMajors) {
-        return true;
-        // console.log('checking rooms');
-        // if (beaconPositions) {
-        //     if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
-        //         return true;
-        //     } else {
-        //         return false;
-        //     }
-        // }
-        // else {
-        //     return false;
-        // }
+        // return true;
+        console.log('checking rooms');
+        if (beaconPositions) {
+            if (beaconPositions['major' + roomMajors[0]] && beaconPositions['major' + roomMajors[1]] && beaconPositions['major' + roomMajors[2]]) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
     }
 
     var requestRoomsWithMajor = function (roomMajors) { // [m1,m2,m3]
-        console.log('requesting rooms')
+        log('requesting rooms with majors'+JSON.stringify(roomMajors));
         for (var i = 0; i < roomMajors.length; i++) {
             if (!beaconPositions['major' + roomMajors[i]]) {
                 RoomService.requestARoom(universal_uuid, roomMajors[i]);
@@ -809,15 +790,17 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     }
 
     $rootScope.$on('add-new-positions', function (event, args) {
+        log('Added room with major: '+args.major);
         beaconPositions['major' + args.major] = {};
-        args.positions.forEach(element => {
-            beaconPositions['major' + args.major]['minor' + element.number] = element.position;
-            updateLocalStorage();
+        args.beacons.forEach(element => {
+            beaconPositions['major' + args.major]['minor' + element.minor] = element.position;
         })
+        updateLocalStorage();
     })
 
     function updateLocalStorage() {
-        console.log('updating localStorage');
+        log('updating localStorage');
+        log(JSON.stringify(beaconPositions))
         storage.setItem(beaconPositionKey, JSON.stringify(beaconPositions));
     }
 
@@ -870,12 +853,12 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     return {
         init: init,
         checkRooms: checkRooms,
-        requestARoomWithMajor: requestRoomsWithMajor,
+        requestRoomsWithMajor: requestRoomsWithMajor,
         getBeaconPositions: getBeaconPositions
     }
 })
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // takes in the position of beacons and the distances of beacons to return the positin of the user as a circle with radius r and center x,y
 
 angular.module('angularApp').factory('CenterlizationService', function ($rootScope, ServerInterfaceService) {
@@ -978,7 +961,7 @@ angular.module('angularApp').factory('CenterlizationService', function ($rootSco
         calculateNewPosition: calculateNewPosition
     };
 })
-},{"../../../../node_modules/trilateration/index.js":3,"circular-buffer":1,"stats-analysis":2}],12:[function(require,module,exports){
+},{"../../../../node_modules/trilateration/index.js":3,"circular-buffer":1,"stats-analysis":2}],11:[function(require,module,exports){
 // This service encapsulates the process of reading beacon packets and detecting the three nearest beacon distances.
 // It triggers the 'calculate-position' event in its parent facade class TriangulationService with the nearest beacons.
 // Exposes one function; init(uuid) which initiates the detection of BLE packets
@@ -1197,7 +1180,7 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
 
 }])
 
-},{"circular-buffer":1,"stats-analysis":2}],13:[function(require,module,exports){
+},{"circular-buffer":1,"stats-analysis":2}],12:[function(require,module,exports){
 angular.module('angularApp').service('TriangulationService', function ($rootScope, BeaconPositionsFactory, CenterlizationService, RealtimeBeaconDistancesService) {
     var universal_uuid;
     var nearbyBeacons;

@@ -1,7 +1,26 @@
 <ion-view view-title="Search">
   <ion-content>
     <h1>Explore</h1>
-      <p>Center: x={{position.x}} y={{position.y}}</p><br>
+    <div ng-controller="CanvasCtrl">
+      <h1>Angular test</h1>
+      <form ng-submit="addData()">
+        <input ng-model="x" size="2" placeholder="X" required type="number" min="0" max="600">
+        <input ng-model="y" size="2" placeholder="Y" required type="number" min="0" max="400">
+        <input ng-model="amount" size="3" placeholder="Amount" required type="number" min="5" max="100">
+        <input class="btn-primary" type="submit" value="Add point">
+      </form>
+      <canvas id="canvas" style="border: 1px gray solid; float: left"></canvas>
+      <div id="list">
+        Points:
+        <ul>
+          <li ng-repeat="point in data">
+            [{{point.x}}, {{point.y}}]
+            <a ng-click="removePoint(point)">[x]</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p>Center: x={{position.x}} y={{position.y}}</p><br>
       <p>Radius= {{position.radius}}</p>
       <div class="list">
         <a class="item item-avatar" ng-repeat="project in projects" ng-click="routeUser(project.title)">

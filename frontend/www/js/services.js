@@ -5,5 +5,4 @@ require('./services/triangulation/TriangulationService');
 require('./services/model/ProjectsService.js');
 require('./services/model/RoomService.js');
 require('./services/model/UserService.js');
-require('./services/NavigationService.js');
 require('./services/ServerInterfaceService.js');

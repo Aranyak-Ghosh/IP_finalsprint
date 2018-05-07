@@ -37,7 +37,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
     }
 
     var requestARoom = function (uuid, major) {
-        ServerInterfaceService.requestARoomWithMajor(universal_uuid, roomMajors[i]);
+        ServerInterfaceService.requestARoomWithMajor(uuid, major);
     }
 
     $rootScope.$on('received-rooms', function (event, args) {
@@ -47,7 +47,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
     
     $rootScope.$on('received-a-room', function(event, args){
         log('recieved one room with major: '+args.major)
-        $rootScope.$broadcast('add-new-positions', {major: args.major, positions:args.beacons})
+        $rootScope.$broadcast('add-new-positions', {major: args.major, beacons:args.beacons})
         addSingleRoom(args);
     })
 

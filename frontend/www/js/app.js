@@ -70,7 +70,27 @@ angular.module('angularApp', ['ionic', 'angularApp.controllers'])
             controller: 'ExploreController'
           }
         }
-      });
+      })
+
+      .state('app.place', {
+        url:'/findPlace',
+        views:{
+          menuContent:{
+            templateUrl: 'templates/findAPlace.html'
+          }
+        }
+      })
+
+      .state('app.submit', {
+        url: '/submit',
+        views:{
+          'menuContent':{
+            templateUrl: 'templates/submit.html',
+            controller: 'SubmitController'
+          }
+        }
+      })
+      ;
     // if none of the above states are matched, use this as the fallback
     $urlRouterProvider.otherwise('/app/landing');
   });

@@ -96,25 +96,6 @@ angular.module('angularApp')
                 })
         }
 
-        // caching image - won't do it
-        
-        // // request a project's image and store the file in storage based on the key
-        // this.requestOneProjectImage = function(route){
-        //     var options = {
-        //         method: 'GET',
-        //         url: URL + route,
-        //     }
-        //     $http(options).then(function(response){
-        //         log('recieved the image from route '+route);
-        //         window.localStorage.setItem(route, response.data);
-        //         $rootScope.$broadcast('saved-image', {route: route});
-        //         //log(data.data);
-        //     })
-        //     .catch(function(error){
-        //         log('Could not fetch image from route: '+route+' error: '+ JSON.stringify(error));
-        //     })
-        // }
-
         /*
         * returns a list of all projects or null if there's an error
         */
@@ -185,19 +166,23 @@ angular.module('angularApp')
         this.requestARoomWithMajor = function (uuid, major) {
             var options = {
                 method: 'POST',
-                url: URL + '/requestARoom',
-                data: { uuid: uuid, major: major }
+                url: URL + '/get-room',
+                data: { /*uuid: uuid,*/ major: major }
             }
             $http(options).then(function (res) {
                 console.log('Server requested room major: ' + major)
                 var response = {
                     major: major,
-                    minors: []
+                    beacons: [],
+                    size:res.data.size
+                    // position:{
+                    //     x:res.position.x,
+                    //     y:res.position.y
+                    // }
                 };
-                for (var i = 0; i < res.minors.length; i++) {
-                    response.minors.push(res.minors[i]);
+                for (var i = 0; i < res.data.beacons.length; i++) {
+                    response.beacons.push(res.data.beacons[i]);
                 }
-
                 $rootScope.$broadcast('received-a-room', response);
             })
                 .catch(function (error) {
