@@ -23,6 +23,8 @@ npm install
 ```
 sudo node estimote.js
 ```
+>Note: The estimote.js script requires permission to access bluetooth functionalities and therefore needs admin privileges
+
 ### Server 
 This node is responsible for handling the RPi context data, as well as contain the middleware of the system, and of course serve clients with data and processed requests.
 > Note: the server must run on a Linux/OSX machine to satisfy the dependency of the on memory database 'redis'.
