@@ -373,7 +373,7 @@ angular.module('angularApp')
             }
             $http(options).then(function () {
                 console.log('Server request to register succeeded')
-                $rootScope.$broadcast('server-register-success', { username: un });
+                $rootScope.$broadcast('server-register-success', { username: username });
             })
                 .catch(function (error) {
                     console.log('Server request to register failed')
@@ -465,6 +465,7 @@ angular.module('angularApp')
                     //     y:res.position.y
                     // }
                 };
+                if (res.data==null) return;
                 for (var i = 0; i < res.data.beacons.length; i++) {
                     response.beacons.push(res.data.beacons[i]);
                 }

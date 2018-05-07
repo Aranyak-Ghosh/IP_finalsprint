@@ -1,8 +1,33 @@
 angular.module('angularApp.controllers', [])
   // This is the controller of the side menu
-  .controller('AppController', function ($rootScope, UserService, $scope, $timeout, $ionicLoading) {
+  .controller('AppController', function (UserService, $ionicModal, $rootScope, UserService, $scope, $timeout, $ionicLoading, ServerInterfaceService) {
 
+    $scope.registerData={};
+  // Create the login modal that we will use later
+  $ionicModal.fromTemplateUrl('templates/register.html', {
+    scope: $scope
+  }).then(function(modal) {
+    $scope.modal = modal;
+  });
+  // Open the login modal
+  $scope.register = function() {
+    $scope.modal.show();
+  };
+    // Triggered in the login modal to close it
+    $scope.closeRegister = function() {
+      $scope.modal.hide();
+    };
+    $scope.doRegister = function() {
+      console.log('Doing registration', $scope.registerData);
+      ServerInterfaceService.serverRegister($scope.registerData.username, $scope.registerData.password, $scope.registerData.email)
+      // Simulate a login delay. Remove this and replace with your login
+      // code if using a login system
+    };
 
+    $scope.$on('server-register-success', function(event, args){
+      UserService.initiateLogin($scope.registerData.username, $scope.registerData.password);
+      $scope.closeRegister();
+    })
     // With the new view caching in Ionic, Controllers are only called
     // when they are recreated or on app start, instead of every page change.
     // To listen for when this page is active (for example, to refresh data),
@@ -115,50 +140,62 @@ angular.module('angularApp.controllers', [])
     var counter = 0;
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
+    var background = new Image();
+    background.src = 'http://10.25.156.58:8080/public/img/maps/2';
 
-    $scope.data = [
 
-    ];
+    var location;
+    var destination;
 
-    $scope.addData = function () {
-      var id = 0;
-      if ($scope.data.length > 0) {
-        id = $scope.data[$scope.data.length - 1].id + 1;
-      }
-      var p = { id: id, x: $scope.x, y: $scope.y, amount: $scope.amount };
-      $scope.data.push(p);
-      $scope.x = '';
-      $scope.y = '';
-      $scope.amount = '';
-      draw($scope.data);
-    };
+    $scope.$on('change-destination', function (event, args) {
+      console.log('changing destination')
+      destination = args;
+      draw();
+    });
 
-    $scope.removePoint = function (point) {
-      console.log(point);
-      for (var i = 0; i < $scope.data.length; i++) {
-        if ($scope.data[i].id === point.id) {
-          console.log("removing item at position: " + i);
-          $scope.data.splice(i, 1);
-        }
-      }
+    $scope.$on('change-location', function (event, args) {
+      console.log('changing location')
+      location = args;
+      draw();
+    })
 
+
+    // var addData = function (center, locationFlag, title, radius) {
+    //   var p = { id: title, x: center.x, y: center.y, amount: radius, location:locationFlag };
+    //   $scope.data.push(p);
+    //   draw($scope.data);
+    // };
+
+    // $scope.removePoint = function (point) {
+    //   console.log(point);
+    //   for (var i = 0; i < $scope.data.length; i++) {
+    //     if ($scope.data[i].id === point.id) {
+    //       console.log("removing item at position: " + i);
+    //       $scope.data.splice(i, 1);
+    //     }
+    //   }
+
+    //   draw($scope.data);
+    //   console.log($scope.data);
+    // }
+
+    function draw() {
       context.clearRect(0, 0, 600, 400);
-      draw($scope.data);
-      console.log($scope.data);
+      context.drawImage(background, 0, 0);
+      console.log('Begin drawing');
+      var lineFlag = true
+      if (location != null) drawLocation();
+      else lineFlag = false;
+      if (destination != null) drawDestination();
+      else lineFlag = false
+      if (lineFlag) drawLine();
     }
 
-    function draw(data) {
-      for (var i = 0; i < data.length; i++) {
-        drawDot(data[i]);
-        if (i > 0) {
-          drawLine(data[i], data[i - 1]);
-        }
-      }
-    }
-
-    function drawDot(data) {
+    const radiusOfDestination = 3;
+    function drawDestination() {
+      console.log('Drawing destination')
       context.beginPath();
-      context.arc(data.x, data.y, data.amount, 0, 2 * Math.PI, false);
+      context.arc(destination.position.x * 20, destination.position.y * 20, radiusOfDestination * 5, 0, 2 * Math.PI, false);
       context.fillStyle = "#ccddff";
       context.fill();
       context.lineWidth = 1;
@@ -166,19 +203,36 @@ angular.module('angularApp.controllers', [])
       context.stroke();
     }
 
-    function drawLine(data1, data2) {
+    function drawLocation() {
+      console.log('drawing location')
       context.beginPath();
-      context.moveTo(data1.x, data1.y);
-      context.lineTo(data2.x, data2.y);
+      context.arc(location.position.x * 30, location.position.y * 30, location.radius * 20, 0, 2 * Math.PI, false);
+      context.fillStyle = "#cc1a14";
+      context.fill();
+      context.lineWidth = 1;
+      context.strokeStyle = "#511311";
+      context.stroke();
+    }
+
+    function drawLine() {
+      console.log('drawing line');
+      context.beginPath();
+      context.moveTo(destination.position.x, location.position.y);
+      context.lineTo(destination.position.x, location.position.y);
       context.strokeStyle = "black";
       context.stroke();
     }
 
     // setup
-    canvas.width = 600;
+    canvas.width = 400;
     canvas.height = 400;
     context.globalAlpha = 1.0;
     context.beginPath();
+
+    background.onload = function () {
+      context.drawImage(background, 0, 0);
+    }
+
     draw($scope.data);
   })
 
@@ -190,7 +244,7 @@ angular.module('angularApp.controllers', [])
   // - allow user to click projects
   // - fetch route to project and show it on screen
   // - move user marker dynamically with user movements
-  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService, RoomService) {
+  .controller('ExploreController', function ($rootScope, $timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService, RoomService) {
     console.log('explorer controller is on')
     function log(message) {
       console.log('EXPLORE CONTROLLER: ' + message);
@@ -204,11 +258,14 @@ angular.module('angularApp.controllers', [])
     $scope.position = { x: 0, y: 0, radius: 0 };
     $scope.projects = ProjectsService.getProjects();
 
+
     $scope.routeUser = function (title) {
       $scope.projects.forEach(element => {
         if (title == element.title) {
           log('Finding route to project: ' + title);
-          drawRoute('');
+
+          $rootScope.$broadcast('change-destination', { position: element.position });
+          // drawRoute('');
         }
       })
     }
@@ -219,6 +276,7 @@ angular.module('angularApp.controllers', [])
 
     $scope.$on('calculated-new-position', function (event, args) {
       log('recieved \'calculated-new-position\' broadcast');
+      $rootScope.$broadcast('change-location', { position: args.center, radius: args.radius })
       $scope.position.x = args.center.x;
       $scope.position.y = args.center.y;
       $scope.position.radius = args.radius;
@@ -230,4 +288,15 @@ angular.module('angularApp.controllers', [])
     };
 
     updateTimer();
+  })
+
+  .controller('RegisterController', function ($ionicHistory, $rootScope, $window, $scope, ServerInterfaceService) {
+    $scope.$on('server-register-success', function(event, args){
+      $rootScope.$broadcast('login-succeeded', {username: args.username});
+      window.history.back();
+    })
+    $scope.doRegister = function () {
+      console.log('REGISTRATION FORM: start registration')
+      ServerInterfaceService.serverRegister($scope.username, $scope.password, $scope.email);
+    }
   });

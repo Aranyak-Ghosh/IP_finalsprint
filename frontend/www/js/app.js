@@ -41,6 +41,15 @@ angular.module('angularApp', ['ionic', 'angularApp.controllers'])
           }
         }
       })
+      .state('app.register', {
+        url: '/register',
+        views: {
+          'menuContent':{
+            templateUrl: 'templates/register.html',
+            controller: 'RegisterController'
+          }
+        }
+      })
 
       .state('app.findProjectOrEvent', {
         url: '/findProjectOrEvent',

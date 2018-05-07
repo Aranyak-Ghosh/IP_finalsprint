@@ -18,12 +18,6 @@
     </ion-header-bar>
     <ion-content>
       <ion-list>
-        <!-- <ion-item menu-close ng-click="login()">
-          Login
-        </ion-item> -->
-        <ion-item menu-close href="#/app/search">
-          Search
-        </ion-item>
         <ion-item menu-close href="#/app/browse">
           Browse
         </ion-item>
@@ -40,7 +34,8 @@
       <label class="item item-input">
         <input type="password" id="password" placeholder="Password" ng-model="credentials.password">
       </label>
-      <button class="button" ng-click="pressLogin()">Login</button>
+      <button class="button button-royal" ng-click="pressLogin()">Login</button>
+      <button class="button button-royal" ng-click="register()">Register</button>
       </div>
       <!-- {{loadingLogin}}
       {{loggedIn}}
@@ -50,7 +45,7 @@
       <div ng-show="loggedIn">
         Hello, {{username}}
         <br>
-        <button class="button" ng-click="pressLogout()">Logout</button>        
+        <button class="button button-royal" ng-click="pressLogout()">Logout</button>        
       </div>
     </ion-content>
   </ion-side-menu>
