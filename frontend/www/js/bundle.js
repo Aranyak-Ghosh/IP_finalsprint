@@ -278,122 +278,16 @@ require('./services/triangulation/BeaconPositionsFactory.js');
 require('./services/triangulation/CenterlizationService');
 require('./services/triangulation/RealtimeBeaconDistancesService');
 require('./services/triangulation/TriangulationService');
+require('./services/model/ProjectsService.js');
+require('./services/model/RoomService.js');
+require('./services/model/UserService.js');
 require('./services/NavigationService.js');
-require('./services/ProjectsService.js');
-require('./services/RoomInfoFactory.js');
 require('./services/ServerInterfaceService.js');
-require('./services/TriangulationLocationService.js');
-require('./services/UserService.js');
-},{"./services/NavigationService.js":5,"./services/ProjectsService.js":6,"./services/RoomInfoFactory.js":7,"./services/ServerInterfaceService.js":8,"./services/TriangulationLocationService.js":9,"./services/UserService.js":10,"./services/triangulation/BeaconPositionsFactory.js":11,"./services/triangulation/CenterlizationService":12,"./services/triangulation/RealtimeBeaconDistancesService":13,"./services/triangulation/TriangulationService":14}],5:[function(require,module,exports){
+},{"./services/NavigationService.js":5,"./services/ServerInterfaceService.js":6,"./services/model/ProjectsService.js":7,"./services/model/RoomService.js":8,"./services/model/UserService.js":9,"./services/triangulation/BeaconPositionsFactory.js":10,"./services/triangulation/CenterlizationService":11,"./services/triangulation/RealtimeBeaconDistancesService":12,"./services/triangulation/TriangulationService":13}],5:[function(require,module,exports){
 angular.module('angularApp').service('NavigationService', function () {
 
 })
 },{}],6:[function(require,module,exports){
-// Will contain the paths of all the projects of this deployment
-angular.module('angularApp').factory('ProjectsService', function ($rootScope, ServerInterfaceService) {
-    var projectsLog = 'PROJECTS SERVICE: ';
-    var projectsKey = 'PROJECTS';
-    var storage = window.localStorage;
-
-    var projects = [];
-    var log = function (message) {
-        console.log(projectsLog + message);
-    }
-
-    // retrieves projects which are saved in the local storage
-    var fetchProjectsFromStorage = function () {
-        log('fetching projects data from local storage')
-        var p = JSON.parse(storage.getItem(projectsKey));
-        if (p) {
-            tempArray = [];
-            log('Fetched projects from local storage ');
-            p.forEach(element => {
-                tempArray.push(element);
-                log('Found in storage: ' + JSON.stringify(element));
-            });
-            projects = tempArray;
-
-        } else {
-            log('There are no projects stored in local storage');
-        }
-    }
-
-    // updates the local storage with new project object
-    var updateLocalStorage = function () {
-        console.log('storing project data in local storage');
-        storage.setItem(projectsKey, JSON.stringify(projects));
-    }
-    var log = function (message) {
-        console.log(projectsLog + message);
-    }
-    // called when new projects are recieved from server
-    $rootScope.$on('server-recieved-projects', function (event, args) {
-        log('recieved all projects');
-        addNewProjects(args.projects);
-    })
-
-    // $rootScope.$on('saved-image', function(event,args){
-    //     log('an image was saved in local storage for '+args.route);
-    //     $rootScope.$broadcast('show-image', {route:route});
-    // })
-
-    function addNewProjects(newProjects) {
-        log('Overwriting old projects');
-        projects = newProjects;
-        projects.forEach(element => {
-            log('recieved project:' + JSON.stringify(element));
-            // ServerInterfaceService.requestOneProjectImage(element.route);
-        });
-        updateLocalStorage();
-    }
-
-    var init = function () {
-        log('initializing ProjectsService');
-        fetchProjectsFromStorage();
-    }
-
-    // should become an ID
-    var requestOneProjectImage = function (title) {
-        log('Attempting to fetch image of project' + title);
-        if (projects.length > 0) {
-            projects.forEach((element) => {
-                if (element.title === title) {
-                    log('Project ' + title + ' loaded. requesting image ...');
-                    ServerInterfaceService.requestOneProjectImage(element.route);
-                    return;
-                }
-            })
-            log('Could not find project ' + title + ' in storage')
-        }
-        else {
-            log('Project: ' + title + ' is not store');
-        }
-    }
-
-    var requestAllProjects = function () {
-        log('requesting all projects from server');
-        ServerInterfaceService.requestProjects();
-    }
-
-    var returnProjectArray = function () {
-        return projects;
-    }
-
-    return {
-        returnProjectArray:returnProjectArray,
-        init: init,
-        requestAllProjects: requestAllProjects
-    }
-
-})
-
-},{}],7:[function(require,module,exports){
-
-    angular.module('angularApp').factory('RoomInfoFactory', function (ServerInterfaceService) {
-        var roomImages
-    })
-
-},{}],8:[function(require,module,exports){
 angular.module('angularApp')
     /*
     * Application to server interface
@@ -602,42 +496,192 @@ angular.module('angularApp')
         }
     })
 
-},{}],9:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
+// Will contain the paths of all the projects of this deployment
+angular.module('angularApp').factory('ProjectsService', function ($rootScope, ServerInterfaceService) {
+    var projectsLog = 'PROJECTS SERVICE: ';
+    var projectsKey = 'PROJECTS';
+    var storage = window.localStorage;
 
-    // Factory to monitor the location of the user
-    angular.module('angularApp').factory('TriangulationLocationServicesFactory', function ($rootScope) {
-        var positionModel = { longitude: 0, latitude: 0 };
-        console.log('Triangulation factory initiated')
+    var projects = [];
+    var log = function (message) {
+        console.log(projectsLog + message);
+    }
 
-        var maximumAge = 3600000;
-        var options = {
-            enableHighAccuracy: true,
-            maximumAge: maximumAge
+    // retrieves projects which are saved in the local storage
+    var fetchProjectsFromStorage = function () {
+        log('fetching projects data from local storage')
+        var p = JSON.parse(storage.getItem(projectsKey));
+        if (p) {
+            tempArray = [];
+            log('Fetched projects from local storage ');
+            p.forEach(element => {
+                tempArray.push(element);
+                log('Found in storage: ' + JSON.stringify(element));
+            });
+            projects = tempArray;
+
+        } else {
+            log('There are no projects stored in local storage');
         }
+    }
 
-        var onSuccess = function (position) {
-            positionModel.longitude = position.coords.longitude;
-            positionModel.latitude = position.coords.latitude;
-            console.log('Triangulation: location changed to: ' + positionModel.latitude + ', ' + positionModel.longitude);
-        }
-
-        var onError = function (positionError) {
-            console.log('TriangulationService ERROR. Code: ' + positionError.code + ' message: ' + positionError.message);
-        }
-
-        var watchID = navigator.geolocation.watchPosition(onSuccess, onError, options);
-
-        return {
-            position: positionModel, // an object containing the long and lat of the user
-            endWatch: function () { // function to end monitoring position
-                navigator.geolocation.clearWatch(watchID);
-            },
-            restartWatch: function () { // function to restart monitoring of positin
-                watchID = navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
-            }
-        }
+    // updates the local storage with new project object
+    var updateLocalStorage = function () {
+        console.log('storing project data in local storage');
+        storage.setItem(projectsKey, JSON.stringify(projects));
+    }
+    var log = function (message) {
+        console.log(projectsLog + message);
+    }
+    // called when new projects are recieved from server
+    $rootScope.$on('server-recieved-projects', function (event, args) {
+        log('recieved all projects');
+        addNewProjects(args.projects);
     })
-},{}],10:[function(require,module,exports){
+
+    // $rootScope.$on('saved-image', function(event,args){
+    //     log('an image was saved in local storage for '+args.route);
+    //     $rootScope.$broadcast('show-image', {route:route});
+    // })
+
+    function addNewProjects(newProjects) {
+        log('Overwriting old projects');
+        projects = newProjects;
+        projects.forEach(element => {
+            log('recieved project:' + JSON.stringify(element));
+            // ServerInterfaceService.requestOneProjectImage(element.route);
+        });
+        updateLocalStorage();
+    }
+
+    var init = function () {
+        log('initializing ProjectsService');
+        fetchProjectsFromStorage();
+    }
+
+    // // should become an ID
+    // var requestOneProjectImage = function (title) {
+    //     log('Attempting to fetch image of project' + title);
+    //     if (projects.length > 0) {
+    //         projects.forEach((element) => {
+    //             if (element.title === title) {
+    //                 log('Project ' + title + ' loaded. requesting image ...');
+    //                 ServerInterfaceService.requestOneProjectImage(element.route);
+    //                 return;
+    //             }
+    //         })
+    //         log('Could not find project ' + title + ' in storage')
+    //     }
+    //     else {
+    //         log('Project: ' + title + ' is not store');
+    //     }
+    // }
+
+    var requestAllProjects = function () {
+        log('requesting all projects from server');
+        ServerInterfaceService.requestProjects();
+    }
+
+    var returnProjectArray = function () {
+        return projects;
+    }
+
+    return {
+        getProjects:returnProjectArray,
+        init: init,
+        requestAllProjects: requestAllProjects
+    }
+
+})
+
+},{}],8:[function(require,module,exports){
+
+angular.module('angularApp').factory('RoomService', function ($rootScope, ServerInterfaceService) {
+    var roomsLog = 'ROOM SERVICE: ';
+    var roomsKey = 'ROOMS';
+    var storage = window.localStorage;
+
+    var rooms = [];
+    var log = function (message) {
+        console.log(roomsLog + message);
+    }
+    
+    var init = function () {
+        log('initializing RoomsService');
+        fetchRoomsFromStorage();
+    }
+
+    var fetchRoomsFromStorage = function(){
+        log('fetching room data from storage');
+        var r = JSON.parse(storage.getItem(roomsKey));
+        if (r) {
+            tempArray = [];
+            log('Fetched rooms from local storage ');
+            r.forEach(element => {
+                tempArray.push(element);
+                log('Found in storage: ' + JSON.stringify(element));
+            });
+            rooms = tempArray;
+        } else {
+            log('There are no rooms stored in local storage');
+        }
+    }
+
+    // updates the local storage with new project object
+    var updateLocalStorage = function () {
+        console.log('storing room data in local storage');
+        storage.setItem(projectsKey, JSON.stringify(rooms));
+    }
+
+    var requestARoom = function (uuid, major) {
+        ServerInterfaceService.requestARoomWithMajor(universal_uuid, roomMajors[i]);
+    }
+
+    $rootScope.$on('received-rooms', function (event, args) {
+        log('recieved all rooms');
+        addNewRooms(args.rooms);
+    })
+    
+    $rootScope.$on('received-a-room', function(event, args){
+        log('recieved one room with major: '+args.major)
+        $rootScope.$broadcast('add-new-positions', {major: args.major, positions:args.beacons})
+        addSingleRoom(args);
+    })
+
+    function addSingleRoom(room){
+        log('adding room'+JSON.stringify(room));
+        rooms.push(room);
+        updateLocalStorage();
+    }
+
+    function addNewRooms(newRooms) {
+        log('Overwriting old rooms');
+        rooms = newRooms;
+        rooms.forEach(element => {
+            log('recieved room:' + JSON.stringify(element));
+            // ServerInterfaceService.requestOneProjectImage(element.route);
+        });
+        updateLocalStorage();
+    }
+
+    // var requestAllrooms = function () {
+    //     log('requesting all rooms from server');
+    //     ServerInterfaceService.requestRooms();
+    // }
+
+    var returnRoomsArray = function () {
+        return rooms;
+    }
+
+    return {
+        init:init,
+        getRooms:returnRoomsArray,
+        requestARoom:requestARoom
+    }
+})
+
+},{}],9:[function(require,module,exports){
 // Exposes: 
     // loggedIn: boolean - Indicates whether user is logged in or not 
     // initiateLogin(username, password): void - starts login process
@@ -713,7 +757,7 @@ angular.module('angularApp')
   
       })
   
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // this factory provides a bindable object of all stored beacon positions.
 // Calculating the distances from each beacon will take into account the proximity factor and RSSI.
 // After getting each beacon's distance and, having their absolute position, the absolute position
@@ -724,7 +768,7 @@ angular.module('angularApp')
 
 // Listens: 'recieved-a-room-positions': expects the beacon positions of every beacon in a room 
 
-angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, ServerInterfaceService) {
+angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootScope, RoomService) {
     // storage references
     var storage = window.localStorage;
     var universal_uuid;
@@ -732,8 +776,7 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
     // beacon positions
     var beaconPositions = {}; // beaconPositions = {}
 
-    function init(uuid) 
-    {   
+    function init(uuid) {
         universal_uuid = uuid;
         var storedPositions = storage.getItem(beaconPositionKey);
         if (storedPositions) beaconPositions = JSON.parse(storedPositions);
@@ -760,17 +803,17 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
         console.log('requesting rooms')
         for (var i = 0; i < roomMajors.length; i++) {
             if (!beaconPositions['major' + roomMajors[i]]) {
-                ServerInterfaceService.requestARoomWithMajor(universal_uuid, roomMajors[i]);
+                RoomService.requestARoom(universal_uuid, roomMajors[i]);
             }
         }
     }
 
-    $rootScope.$on('received-a-room', function (event, args) {
+    $rootScope.$on('add-new-positions', function (event, args) {
         beaconPositions['major' + args.major] = {};
-        for (var i = 0; i < args.minors.length; i++) {
-            beaconPositions['major' + args.major]['minor' + args.minors[i].number] = args.minors[i].position;
+        args.positions.forEach(element => {
+            beaconPositions['major' + args.major]['minor' + element.number] = element.position;
             updateLocalStorage();
-        }
+        })
     })
 
     function updateLocalStorage() {
@@ -819,20 +862,20 @@ angular.module('angularApp').factory('BeaconPositionsFactory', function ($rootSc
             }
         }
 
-    var getBeaconPositions = function(){
+    var getBeaconPositions = function () {
         return beaconPosition;
         // return beaconPositions;
     }
 
     return {
-        init:init,
+        init: init,
         checkRooms: checkRooms,
         requestARoomWithMajor: requestRoomsWithMajor,
         getBeaconPositions: getBeaconPositions
     }
 })
 
-},{}],12:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // takes in the position of beacons and the distances of beacons to return the positin of the user as a circle with radius r and center x,y
 
 angular.module('angularApp').factory('CenterlizationService', function ($rootScope, ServerInterfaceService) {
@@ -935,7 +978,7 @@ angular.module('angularApp').factory('CenterlizationService', function ($rootSco
         calculateNewPosition: calculateNewPosition
     };
 })
-},{"../../../../node_modules/trilateration/index.js":3,"circular-buffer":1,"stats-analysis":2}],13:[function(require,module,exports){
+},{"../../../../node_modules/trilateration/index.js":3,"circular-buffer":1,"stats-analysis":2}],12:[function(require,module,exports){
 // This service encapsulates the process of reading beacon packets and detecting the three nearest beacon distances.
 // It triggers the 'calculate-position' event in its parent facade class TriangulationService with the nearest beacons.
 // Exposes one function; init(uuid) which initiates the detection of BLE packets
@@ -1154,7 +1197,7 @@ angular.module('angularApp').factory('RealtimeBeaconDistancesService', ['$timeou
 
 }])
 
-},{"circular-buffer":1,"stats-analysis":2}],14:[function(require,module,exports){
+},{"circular-buffer":1,"stats-analysis":2}],13:[function(require,module,exports){
 angular.module('angularApp').service('TriangulationService', function ($rootScope, BeaconPositionsFactory, CenterlizationService, RealtimeBeaconDistancesService) {
     var universal_uuid;
     var nearbyBeacons;

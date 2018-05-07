@@ -89,7 +89,7 @@ angular.module('angularApp').factory('ProjectsService', function ($rootScope, Se
     }
 
     return {
-        returnProjectArray:returnProjectArray,
+        getProjects:returnProjectArray,
         init: init,
         requestAllProjects: requestAllProjects
     }

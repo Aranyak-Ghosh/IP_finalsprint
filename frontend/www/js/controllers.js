@@ -115,7 +115,7 @@ angular.module('angularApp.controllers', [])
   // - allow user to click projects
   // - fetch route to project and show it on screen
   // - move user marker dynamically with user movements
-  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService) {
+  .controller('ExploreController', function ($timeout, $scope, ServerInterfaceService, TriangulationService, ProjectsService, RoomService) {
     console.log('explorer controller is on')
     function log(message){
       console.log('EXPLORE CONTROLLER: '+message);
@@ -124,12 +124,24 @@ angular.module('angularApp.controllers', [])
     TriangulationService.init('b9407f30-f5f8-466e-aff9-25556b57fe6d');
     ProjectsService.init();
     ProjectsService.requestAllProjects();
+    RoomService.init();
+    $scope.rooms  = RoomService.getRooms();
     $scope.position={x:0,y:0,radius:0};
-    $scope.projects = ProjectsService.returnProjectArray();
-    // $scope.$on('show-image', function(event, args){
-    //   var imageRoute = args.route;
-    //   $scope.image = window.localStorage.getItem(route);
-    // })
+    $scope.projects = ProjectsService.getProjects();
+    
+    $scope.routeUser = function(title){
+      $scope.projects.forEach(element=>{
+        if (title==element.title){
+          log('Finding route to project: '+title);
+          drawRoute('');
+        }
+      })
+    }
+
+    function drawRoute(destination){
+      log('Drawing route to destination ....');
+    }
+
     $scope.$on('calculated-new-position', function(event, args){
       log('recieved \'calculated-new-position\' broadcast');
       $scope.position.x = args.center.x;
@@ -137,12 +149,8 @@ angular.module('angularApp.controllers', [])
       $scope.position.radius = args.radius;
     })
     var updateTimer = function () {
-        // ProjectsService.requestAllProjects();
-        // $scope.projects.pReference.forEach((element)=>{
-        //   console.log(JSON.stringify(element));
-        // })
         
-    $scope.projects = ProjectsService.returnProjectArray();
+    $scope.projects = ProjectsService.getProjects();
       $timeout(updateTimer, 5000);
     };
 

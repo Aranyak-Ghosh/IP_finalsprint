@@ -4,7 +4,7 @@
       <p>Center: x={{position.x}} y={{position.y}}</p><br>
       <p>Radius= {{position.radius}}</p>
       <div class="list">
-        <a class="item item-avatar" ng-repeat="project in projects">
+        <a class="item item-avatar" ng-repeat="project in projects" ng-click="routeUser(project.title)">
           <img src="{{URL+project.route}}">
           <h2>{{project.title}}</h2>
           <h2>{{project.artist}}</h2>

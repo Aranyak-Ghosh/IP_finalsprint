@@ -6,7 +6,7 @@ angular.module('angularApp').factory('RoomService', function ($rootScope, Server
 
     var rooms = [];
     var log = function (message) {
-        console.log(projectsLog + message);
+        console.log(roomsLog + message);
     }
     
     var init = function () {
