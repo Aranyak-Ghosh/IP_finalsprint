@@ -1,6 +1,6 @@
 
 # HYBrid
-It's pretty fucking cool
+An indoor wayfinding system build around the College of Art and Architectural Design Building at the American Unviersity of Sharjah. This repository includes an entire system with a backend cloud server that's deployable on any device or server, a server that's deployble on normal devices or RPis (provided the devie has active bluetooth and internet connections) and a cross platform mobile application. 
 ## Installation
 There are three different nodes in the system. The **server, RPi gateway**, and **mobile application.** Each one of these components lives on a different device and, therefore, must be installed differently. The first step for all nodes is the same; start by cloning the repository:
 ```
